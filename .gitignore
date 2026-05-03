@@ -6,3 +6,5 @@ out-test/
 build/buildroot-src/
 build/toolchain/
 .DS_Store
+__pycache__/
+*.pyc

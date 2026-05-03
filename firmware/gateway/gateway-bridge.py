@@ -6,6 +6,7 @@ and publishes AI detection results back to the fleet.
 """
 
 import json
+import os
 import threading
 import time
 from collections import deque
@@ -20,7 +21,10 @@ except ImportError:
     print("WARNING: tflite_runtime not available; AI inference disabled")
     TFLITE_AVAILABLE = False
 
-MODEL_PATH = "/usr/local/share/models/mobilenet_ssd_v2_quantized.tflite"
+MODEL_PATH = os.environ.get(
+    "TFLITE_MODEL_PATH",
+    "/usr/local/share/models/mobilenet_ssd_v2_quantized.tflite",
+)
 
 # Buffers for aggregating sensor streams
 vision_queue: deque = deque(maxlen=30)

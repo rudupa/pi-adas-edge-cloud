@@ -9,7 +9,7 @@ three edge nodes in the pi-adas-edge-cloud system:
 |---------|----------------------|--------------|
 | Sensor  | Raspberry Pi Zero W  | ARMv6l / BCM2835 |
 | UI      | Raspberry Pi Zero W  | ARMv6l / BCM2835 |
-| Gateway | Raspberry Pi 4 Model B | ARMv7l 32-bit mode / BCM2711 (Cortex-A72) |
+| Gateway | Raspberry Pi 4 Model B | AArch32 (ARMv8-A 32-bit) / BCM2711 (Cortex-A72) |
 
 ---
 
