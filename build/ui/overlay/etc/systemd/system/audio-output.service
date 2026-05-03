@@ -1,0 +1,14 @@
+[Unit]
+Description=ADAS UI Audio Output Service (MQTT → ALSA)
+After=sound.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/audio-output.py
+Restart=on-failure
+RestartSec=5
+Environment=GATEWAY_IP=192.168.4.1
+
+[Install]
+WantedBy=multi-user.target

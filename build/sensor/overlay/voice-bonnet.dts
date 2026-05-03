@@ -1,0 +1,44 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    fragment@0 {
+        target = <&i2c1>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+
+            wm8960: codec@1a {
+                compatible = "wlf,wm8960";
+                reg = <0x1a>;
+                clocks = <&clocks BCM2835_CLOCK_I2S>;
+                clock-names = "xclk";
+                wlf,shared-lrclk;
+            };
+        };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            leds {
+                compatible = "gpio-leds";
+
+                power {
+                    label = "voice-bonnet:red:power";
+                    gpios = <&gpio 17 0>;
+                    default-state = "on";
+                };
+
+                busy {
+                    label = "voice-bonnet:green:busy";
+                    gpios = <&gpio 27 0>;
+                    default-state = "off";
+                };
+            };
+        };
+    };
+};

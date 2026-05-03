@@ -1,0 +1,10 @@
+base-files
+busybox
+linux-headers
+systemd
+openssh-server
+curl
+ca-certificates
+mosquitto-clients
+alsa-utils
+v4l-utils

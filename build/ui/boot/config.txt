@@ -1,0 +1,10 @@
+# Raspberry Pi Zero W boot configuration — UI node
+
+[pi0w]
+kernel=kernel.img
+arm_freq=1000
+gpu_mem=64
+dtoverlay=spi1-3cs
+dtparam=i2c_arm=on
+dtparam=spi=on
+enable_uart=1

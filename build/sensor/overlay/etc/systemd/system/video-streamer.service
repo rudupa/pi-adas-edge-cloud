@@ -1,0 +1,14 @@
+[Unit]
+Description=Video Streaming Service (GStreamer H.264 → Gateway)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=/usr/local/bin/camera-init.sh
+ExecStart=/usr/local/bin/video-streamer.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

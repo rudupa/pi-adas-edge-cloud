@@ -1,0 +1,12 @@
+# Raspberry Pi 4 boot configuration — Gateway node
+
+[pi4]
+kernel=kernel.img
+arm_freq=1800
+gpu_mem=256
+enable_gic=1
+dtoverlay=disable-bt
+dtparam=i2c_arm=on
+dtparam=spi=on
+dtoverlay=gpio-fan,gpiopin=4
+enable_uart=1

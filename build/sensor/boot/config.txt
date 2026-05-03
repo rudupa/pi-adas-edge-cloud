@@ -1,0 +1,12 @@
+# Raspberry Pi Zero W boot configuration — Sensor node
+
+[pi0w]
+kernel=kernel.img
+arm_freq=1000
+over_voltage=4
+dtoverlay=disable-bt
+dtparam=i2c_arm=on
+dtparam=spi=on
+dtparam=audio=on
+enable_uart=1
+gpu_mem=16
