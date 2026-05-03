@@ -3,9 +3,14 @@
 
 BR2_arm=y
 BR2_ARM_EABIHF=y
-BR2_ARM_INSTRUCTIONS_THUMB2=y
 BR2_OPTIMIZE_FOR_BUILD=y
 BR2_OPTIMIZE_SIZE=y
+
+# Toolchain: glibc required by systemd
+BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
+
+# Init system: systemd (matches rootfs overlay and BUILD_STRATEGY.md)
+BR2_INIT_SYSTEMD=y
 
 BR2_LINUX_KERNEL=y
 BR2_LINUX_KERNEL_CUSTOM_GIT=y

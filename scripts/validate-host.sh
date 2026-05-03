@@ -12,6 +12,14 @@ check_tool() {
     fi
 }
 
+check_optional_tool() {
+    if command -v "$1" >/dev/null 2>&1; then
+        echo "  [OK]  $1"
+    else
+        echo "  [OPTIONAL] $1 — not found (non-fatal)"
+    fi
+}
+
 echo "=== Host Validation for pi-adas-edge-cloud Build ==="
 echo ""
 
@@ -22,7 +30,7 @@ done
 
 echo ""
 echo "Optional cross-compiler (needed for non-ARM host):"
-check_tool gcc-arm-linux-gnueabihf || true
+check_optional_tool gcc-arm-linux-gnueabihf
 
 echo ""
 echo "Checking disk space..."

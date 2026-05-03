@@ -24,6 +24,18 @@
         };
     };
 
+    /* GPIO backlight for ST7789 */
+    fragment@4 {
+        target-path = "/";
+        __overlay__ {
+            backlight: backlight {
+                compatible = "gpio-backlight";
+                gpios = <&gpio 13 0>;
+                default-on;
+            };
+        };
+    };
+
     /* GPIO buttons */
     fragment@1 {
         target-path = "/";

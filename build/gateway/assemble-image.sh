@@ -8,11 +8,11 @@ NODE="gateway"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-ROOTFS="${REPO_ROOT}/build/buildroot-src/output/images/rootfs.tar.gz"
-KERNEL="${REPO_ROOT}/build/buildroot-src/output/images/zImage"
+ROOTFS="${REPO_ROOT}/build/${NODE}/output/images/rootfs.tar.gz"
+KERNEL="${REPO_ROOT}/build/${NODE}/output/images/zImage"
 
 if [ ! -f "${ROOTFS}" ] || [ ! -f "${KERNEL}" ]; then
-    echo "ERROR: Build artifacts missing; run 'make -C build/buildroot-src' first" >&2
+    echo "ERROR: Build artifacts missing; run 'make -C build/buildroot-src O=../gateway/output gateway_defconfig && make -C build/buildroot-src O=../gateway/output' first" >&2
     exit 1
 fi
 

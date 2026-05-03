@@ -24,6 +24,12 @@ for node in sensor ui gateway; do
     echo "Created ${node}/output"
 done
 
+echo ""
+echo "To build a node image using its per-node output directory, run:"
+echo "  make -C build/buildroot-src O=\$(pwd)/build/sensor/output BR2_EXTERNAL=\$(pwd)/build/sensor sensor_defconfig"
+echo "  make -C build/buildroot-src O=\$(pwd)/build/sensor/output"
+echo "(Replace 'sensor' with 'ui' or 'gateway' as needed)"
+
 # Validate host tools
 echo ""
 echo "Validating required build tools..."

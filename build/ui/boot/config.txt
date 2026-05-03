@@ -7,4 +7,6 @@ gpu_mem=64
 dtoverlay=spi1-3cs
 dtparam=i2c_arm=on
 dtparam=spi=on
+# Load compiled pirate-audio overlay (pirate-audio.dtbo must be in /boot/overlays/)
+dtoverlay=pirate-audio
 enable_uart=1
