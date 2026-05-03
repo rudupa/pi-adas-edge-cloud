@@ -1,0 +1,92 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    /* ST7789 SPI display */
+    fragment@0 {
+        target = <&spi0>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+
+            st7789_display: display@0 {
+                compatible = "sitronix,st7789v";
+                reg = <0>;
+                spi-max-frequency = <80000000>;
+                dc-gpios = <&gpio 25 0>;
+                reset-gpios = <&gpio 27 0>;
+                rotation = <90>;
+                backlight = <&backlight>;
+            };
+        };
+    };
+
+    /* GPIO buttons */
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            gpio_keys: gpio-keys {
+                compatible = "gpio-keys";
+
+                button_a {
+                    label = "Button A";
+                    gpios = <&gpio 6 1>;
+                    linux,code = <0x130>; /* BTN_A */
+                };
+
+                button_b {
+                    label = "Button B";
+                    gpios = <&gpio 12 1>;
+                    linux,code = <0x131>; /* BTN_B */
+                };
+
+                button_x {
+                    label = "Button X";
+                    gpios = <&gpio 20 1>;
+                    linux,code = <0x132>; /* BTN_C */
+                };
+
+                button_y {
+                    label = "Button Y";
+                    gpios = <&gpio 16 1>;
+                    linux,code = <0x133>; /* BTN_D */
+                };
+            };
+        };
+    };
+
+    /* MAX98357A I2S amplifier */
+    fragment@2 {
+        target = <&i2s>;
+        __overlay__ {
+            status = "okay";
+        };
+    };
+
+    fragment@3 {
+        target-path = "/";
+        __overlay__ {
+            max98357a: codec@0 {
+                compatible = "maxim,max98357a";
+                #sound-dai-cells = <0>;
+                sdmode-gpios = <&gpio 7 0>;
+            };
+
+            sound {
+                compatible = "simple-audio-card";
+                simple-audio-card,name = "Pirate Audio";
+
+                simple-audio-card,cpu {
+                    sound-dai = <&i2s>;
+                };
+
+                simple-audio-card,codec {
+                    sound-dai = <&max98357a>;
+                };
+            };
+        };
+    };
+};

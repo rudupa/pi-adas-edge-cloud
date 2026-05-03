@@ -1,0 +1,13 @@
+[Unit]
+Description=ADAS Gateway Bridge (AI inference + MQTT aggregation)
+After=mosquitto.service network-online.target
+Wants=mosquitto.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/gateway-bridge.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

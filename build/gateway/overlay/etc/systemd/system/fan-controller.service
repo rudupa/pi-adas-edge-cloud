@@ -1,0 +1,12 @@
+[Unit]
+Description=Thermal Fan Controller
+After=sysinit.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/fan-controller.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
