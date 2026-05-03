@@ -1,0 +1,108 @@
+name: Build All Nodes
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-edge:
+    name: Build ${{ matrix.target }} image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [sensor, ui, gateway]
+
+    env:
+      VERSION: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh build/*/build.sh cloud/build.sh
+
+      - name: Build edge image bundle
+        run: |
+          set -euo pipefail
+          VERSION_VALUE="${VERSION:-dev}"
+          ./scripts/build-node.sh "${{ matrix.target }}" "${VERSION_VALUE}" "out/${{ matrix.target }}"
+
+      - name: Upload edge artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-artifact
+          path: out/${{ matrix.target }}
+
+  build-cloud:
+    name: Build cloud artifacts
+    runs-on: ubuntu-latest
+
+    env:
+      VERSION: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh build/*/build.sh cloud/build.sh
+
+      - name: Build cloud bundle
+        run: |
+          set -euo pipefail
+          VERSION_VALUE="${VERSION:-dev}"
+          ./scripts/build-cloud.sh "${VERSION_VALUE}" out/cloud
+
+      - name: Upload cloud artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-artifact
+          path: out/cloud
+
+  release-manifest:
+    name: Generate unified release manifest
+    runs-on: ubuntu-latest
+    needs: [build-edge, build-cloud]
+
+    env:
+      VERSION: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh build/*/build.sh cloud/build.sh
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Normalize artifact layout
+        run: |
+          set -euo pipefail
+          mkdir -p bundle/sensor bundle/ui bundle/gateway bundle/cloud
+          cp -R artifacts/sensor-artifact/. bundle/sensor/
+          cp -R artifacts/ui-artifact/. bundle/ui/
+          cp -R artifacts/gateway-artifact/. bundle/gateway/
+          cp -R artifacts/cloud-artifact/. bundle/cloud/
+
+      - name: Create release manifest
+        run: |
+          set -euo pipefail
+          VERSION_VALUE="${VERSION:-dev}"
+          ./scripts/generate-ota-manifest.sh "${VERSION_VALUE}" bundle out/release/release-manifest.json
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest
+          path: out/release/release-manifest.json

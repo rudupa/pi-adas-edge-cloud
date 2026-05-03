@@ -1,0 +1,8 @@
+bundle-test/
+out-test/
+*.img
+*.img.xz
+*.tar.gz
+build/buildroot-src/
+build/toolchain/
+.DS_Store
