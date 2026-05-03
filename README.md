@@ -133,6 +133,18 @@ Detailed 14-week roadmap to close all production-readiness gaps.
 - Security hardening checklist and production deployment checklist
 - Resource estimates and references
 
+### [agent_development_plan.md](agent_development_plan.md)
+Autonomous agent execution plan for implementing the 14-week roadmap in 8–10 weeks.
+- Agent capabilities and constraints (parallelization, automation, hardware limitations)
+- Task decomposition with dependency graph and critical path analysis
+- Phase-by-phase execution plan with concrete checkpoints and deliverables
+- Parallel work streams (Buildroot configs, services development, testing, security/OTA)
+- Risk mitigation strategies and decision points (Buildroot failures, hardware unavailability, key management)
+- Automation hooks for CI/CD, build verification, and testing
+- Success criteria per phase and acceleration metrics
+- Agent decision matrix (when to auto-proceed vs. request user input)
+- Quick-start bash script for executing all phases sequentially
+
 ---
 
 ## Key Design Decisions
