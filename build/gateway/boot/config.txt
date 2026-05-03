@@ -8,5 +8,7 @@ enable_gic=1
 dtoverlay=disable-bt
 dtparam=i2c_arm=on
 dtparam=spi=on
-dtoverlay=gpio-fan,gpiopin=4
+# Load compiled braincraft overlay (braincraft.dtbo must be in /boot/overlays/)
+# Fan control is handled by the braincraft overlay's gpio-fan node; no separate dtoverlay=gpio-fan needed.
+dtoverlay=braincraft
 enable_uart=1

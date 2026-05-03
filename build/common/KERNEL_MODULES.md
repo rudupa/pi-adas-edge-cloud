@@ -47,7 +47,7 @@ This document lists the Linux kernel configuration options required per node.
 - `CONFIG_MAC80211=y`
 - `CONFIG_CFG80211=y`
 - `CONFIG_NL80211_TESTMODE=y`
-- `CONFIG_HOSTAPD=y`               – WiFi Access Point daemon
+- `BR2_PACKAGE_HOSTAPD=y`          – WiFi Access Point daemon (Buildroot package, not a kernel option)
 
 ### Thermal / Power
 - `CONFIG_THERMAL=y`
@@ -57,7 +57,7 @@ This document lists the Linux kernel configuration options required per node.
 
 ### Video Hardware Decode
 - `CONFIG_MEDIA_SUPPORT=y`
-- `CONFIG_VIDEO_V4L2_MEM2MEM=y`
+- `CONFIG_V4L2_MEM2MEM_DEV=y`
 - `CONFIG_VIDEO_RPIVID=m`          – H.264 hardware decoder
 
 ### Container / Security (future)
