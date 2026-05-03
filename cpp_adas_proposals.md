@@ -642,7 +642,8 @@ mixer, Paho MQTT C++
 #include <mqtt/async_client.h>
 
 static constexpr uint16_t UDP_PORT     = 5001;
-static constexpr int      QUEUE_MAX    = 100;
+static constexpr int      QUEUE_MAX    = 100;   // frames per priority level (matches Python deque maxlen)
+static constexpr int      QUEUE_CAP    = QUEUE_MAX * 4; // total capacity across all 4 priority levels
 static constexpr int      MIXER_MS     = 10;
 
 // ── Priority enum ─────────────────────────────────────────────────────────────
@@ -723,6 +724,8 @@ static void udp_listener()
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     std::printf("UDP listener bound to 0.0.0.0:%d\n", UDP_PORT);
 
+    // Single-threaded listener: static buffer is safe here.
+    // If multiple listener threads are added in future, move buf to the stack.
     static uint8_t buf[65535];
 
     while (true) {
@@ -750,7 +753,7 @@ static void udp_listener()
         frame.data.assign(buf + 8, buf + n);
 
         std::lock_guard<std::mutex> lk(g_mtx);
-        if (static_cast<int>(g_queue.size()) < QUEUE_MAX * 4) {
+        if (static_cast<int>(g_queue.size()) < QUEUE_CAP) {
             g_queue.push(std::move(frame));
             // Wake mixer immediately for high-priority frames
             if (prio <= P1_ADVISORY) g_cv.notify_one();
@@ -781,19 +784,22 @@ static void mixer_thread(mqtt::async_client &cli)
         if (!have_frame) continue;
 
         std::string b64 = base64_encode(frame.data.data(), frame.data.size());
-        char payload[512 + b64.size()];
-        std::snprintf(payload, sizeof(payload),
+        // Use std::string for the payload to avoid a VLA (not standard C++17)
+        std::string payload;
+        payload.resize(512 + b64.size());
+        int plen = std::snprintf(payload.data(), payload.size(),
                       R"({"priority":%d,"audio_b64":"%s","source":"%s"})",
                       static_cast<int>(frame.priority),
                       b64.c_str(),
                       frame.source_ip.c_str());
+        payload.resize(static_cast<size_t>(plen));
 
         char topic[64];
         std::snprintf(topic, sizeof(topic),
                       "ui/audio/play/%d", static_cast<int>(frame.priority));
 
         if (cli.is_connected())
-            cli.publish(topic, payload, std::strlen(payload), 0, false);
+            cli.publish(topic, payload.c_str(), payload.size(), 0, false);
     }
 }
 
@@ -1022,7 +1028,7 @@ target_link_libraries(audio-mixer PRIVATE
 | `audio-mixer` | 10 ms tick imprecision, GIL on every UDP packet | **Migrate second** — P0 safety audio has <100 ms budget |
 | `gateway-bridge` | GIL prevents true parallel inference | Migrate with TFLite C API; Python acceptable short-term |
 | `status-publisher` | Only telemetry; no real-time constraint | Lowest priority; Python is acceptable long-term |
-| `pipeline.sh` | Shell is fine for a GStreamer one-liner | Replace with `video_pipeline.cpp` only if supervison/watchdog needed |
+| `pipeline.sh` | Shell is fine for a GStreamer one-liner | Replace with `video_pipeline.cpp` only if supervision/watchdog needed |
 
 ---
 
