@@ -23,7 +23,7 @@ _fail() { echo "FAIL: $*"; (( FAIL_COUNT++ )) || true; }
 
 echo "=== Starting services ==="
 for svc in mosquitto video-streamer audio-capture audio-output; do
-    if systemctl list-unit-files "${svc}.service" &>/dev/null 2>&1; then
+    if systemctl list-unit-files "${svc}.service" &>/dev/null; then
         systemctl start "${svc}" 2>/dev/null && echo "  started: ${svc}" \
             || echo "  WARNING: could not start ${svc} (may already be running)"
     else

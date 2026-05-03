@@ -250,12 +250,18 @@ int main(int argc, char *argv[])
                 gateway_ip, gateway_port);
 
     /* ── Run until interrupted ── */
+    static volatile sig_atomic_t g_stop = 0;
+    static void (*stop_handler)(int) = [](int) { g_stop = 1; };
+
     struct sigaction sa{};
-    sa.sa_handler = [](int) { /* caught below via atomic */ };
+    sa.sa_handler = stop_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
     sigaction(SIGINT,  &sa, nullptr);
     sigaction(SIGTERM, &sa, nullptr);
 
-    pause(); // sleep until a signal is received
+    while (!g_stop)
+        pause(); // sleep until a signal is received
 
     running = false;
     camera->stop();

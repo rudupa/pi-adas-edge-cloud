@@ -71,6 +71,8 @@ def _parse_source_priority(source_ip: str) -> Priority:
 def udp_listener() -> None:
     """Background thread: receive UDP audio frames and enqueue them."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # Bind to all interfaces so the mixer receives audio from all sensor nodes
+    # on the local AP subnet — this is the expected multi-client deployment.
     sock.bind((UDP_BIND_IP, UDP_BIND_PORT))
     sock.settimeout(1.0)
     print(f"UDP listener bound to {UDP_BIND_IP}:{UDP_BIND_PORT}")
