@@ -32,8 +32,8 @@ if [ "$TEMP_C" -ge "$WARN_THRESHOLD_C" ]; then
 fi
 
 # ── PWM chip for fan ──────────────────────────────────────────────────────────
-if find /sys/class/pwm -name 'pwm*' -maxdepth 2 2>/dev/null | grep -q .; then
-    PWM_LIST=$(find /sys/class/pwm -name 'pwm*' -maxdepth 2 2>/dev/null | tr '\n' ' ')
+PWM_LIST=$(find /sys/class/pwm -name 'pwm*' -maxdepth 2 2>/dev/null | tr '\n' ' ')
+if [ -n "$PWM_LIST" ]; then
     echo "INFO: PWM fan channel(s) present: ${PWM_LIST}"
 else
     echo "WARN: PWM channel not yet enumerated (may appear after first access — non-fatal)"

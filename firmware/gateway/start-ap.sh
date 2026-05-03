@@ -89,4 +89,5 @@ else
 fi
 
 echo ""
-echo "AP ready — SSID: $(grep '^ssid=' "${HOSTAPD_CONF}" | cut -d= -f2-), IP: ${AP_IP}"
+SSID=$(grep '^ssid=' "${HOSTAPD_CONF}" | cut -d= -f2- || echo '<not configured>')
+echo "AP ready — SSID: ${SSID}, IP: ${AP_IP}"

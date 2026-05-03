@@ -29,9 +29,9 @@ for gpio in "${LED_GPIOS[@]}"; do
     echo out > "${sysfs}/direction" 2>/dev/null \
         || fail "cannot set GPIO ${gpio} as output"
 
-    # Blink: on → off
+    # Blink: on → off  (BLINK_MS expressed in seconds via awk)
     echo 1 > "${sysfs}/value" 2>/dev/null || fail "cannot write GPIO ${gpio} high"
-    sleep "0.$(printf '%03d' "$BLINK_MS")"
+    sleep "$(awk "BEGIN {printf \"%.3f\", ${BLINK_MS}/1000}")"
     echo 0 > "${sysfs}/value" 2>/dev/null || fail "cannot write GPIO ${gpio} low"
 
     echo "INFO: LED GPIO ${gpio} blink OK"
