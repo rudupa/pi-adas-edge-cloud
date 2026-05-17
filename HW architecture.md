@@ -2,28 +2,36 @@
 
 ## Table of Contents
 
-- [1. Physical Node Topology](#1-physical-node-topology)
-- [2. Interconnect Model](#2-interconnect-model)
-- [3. Node-Level Hardware Responsibilities](#3-node-level-hardware-responsibilities)
-- [4. Deployment Zones](#4-deployment-zones)
-- [5. Hardware Architecture Diagram](#5-hardware-architecture-diagram)
-- [6. Reliability and Serviceability Notes](#6-reliability-and-serviceability-notes)
-- [7. Security Boundaries](#7-security-boundaries)
+- [Hardware Architecture](#hardware-architecture)
+  - [Table of Contents](#table-of-contents)
+  - [1. Physical Node Topology](#1-physical-node-topology)
+  - [2. Interconnect Model](#2-interconnect-model)
+    - [Wireless fabric](#wireless-fabric)
+    - [Data plane separation](#data-plane-separation)
+  - [3. Node-Level Hardware Responsibilities](#3-node-level-hardware-responsibilities)
+    - [Sensor Node wiring and role](#sensor-node-wiring-and-role)
+    - [UI Node wiring and role](#ui-node-wiring-and-role)
+    - [Compute Node wiring and role](#compute-node-wiring-and-role)
+  - [4. Deployment Zones](#4-deployment-zones)
+  - [5. Hardware Architecture Diagram](#5-hardware-architecture-diagram)
+  - [6. Reliability and Serviceability Notes](#6-reliability-and-serviceability-notes)
+  - [7. Security Boundaries](#7-security-boundaries)
 
 ---
 
 ## 1. Physical Node Topology
 
-- Sensor Node (Pi Zero W + Camera + Voice Bonnet) handles sensing and edge media generation.
+- Sensor Node A (Pi Zero W + Camera + Voice Bonnet) handles low-power edge media generation.
+- Sensor Node B (Pi 4 + QNX + BrainCraft HAT) handles deterministic real-time sensing and local AI preprocessing.
 - UI Node (Pi Zero W + Pirate Audio) handles local human interaction (display, buttons, speaker).
-- Gateway + Master Node (Pi 4 + BrainCraft) provides local wireless infrastructure, edge-to-cloud bridge, coordination logic, and AI processing.
+- Compute Node (Pi 5) provides local wireless infrastructure, edge-to-cloud bridge, and multi-node orchestration.
 - Cloud Node (managed or self-hosted) provides telemetry storage, centralized logging, OTA rollout control, and fleet dashboards.
 
 ## 2. Interconnect Model
 
 ### Wireless fabric
-- All nodes join a private WLAN created by the Gateway + Master Node.
-- Gateway + Master node provides:
+- All nodes join a private WLAN created by the Compute Node.
+- Compute Node provides:
   - DHCP
   - Local DNS (optional)
   - Service endpoints for MQTT and API
@@ -37,23 +45,23 @@
 ## 3. Node-Level Hardware Responsibilities
 
 ### Sensor Node wiring and role
-- CSI camera connected directly to Pi Zero camera interface.
-- Voice Bonnet attached to Pi Zero GPIO header for audio I/O.
-- LED outputs mapped to GPIO pins for remote control.
-- Captures media and transmits to UI/Gateway+Master endpoints.
+- Sensor A (Pi Zero): CSI camera connected directly to Pi Zero camera interface.
+- Sensor A (Pi Zero): Voice Bonnet attached to Pi Zero GPIO header for audio I/O.
+- Sensor A (Pi Zero): LED outputs mapped to GPIO pins for remote control.
+- Sensor B (Pi 4 QNX): BrainCraft HAT attached for deterministic audio input, local UI, and onboard controls.
+- Sensor B (Pi 4 QNX): Performs real-time sensor fusion and publishes control/telemetry to gateway.
 
 ### UI Node wiring and role
 - Pirate Audio HAT mounted on Pi Zero GPIO header.
 - Display receives decoded stream for local visualization.
-- Buttons generate event messages to Gateway + Master via MQTT.
+- Buttons generate event messages to Compute Node via MQTT.
 - Speaker renders incoming audio stream/commands.
 
-### Gateway + Master Node wiring and role
+### Compute Node wiring and role
 - Onboard Wi-Fi runs AP mode for isolated local network.
 - Optional Ethernet uplink for internet/cloud.
-- BrainCraft HAT attached to Pi 4 for accelerated/structured AI tasks.
-- Hosts Mosquitto, network services, and monitoring agents.
-- Receives events (buttons, sensor status), performs inference, publishes commands.
+- Pi 5 hosts Mosquitto, network services, and monitoring agents.
+- Receives events (buttons, sensor status), performs orchestration, publishes commands.
 - Reports summarized state to cloud via gateway services.
 
 ## 4. Deployment Zones
@@ -63,26 +71,31 @@
   - Prioritize low latency over perfect reliability
 
 - Zone B: Edge control intelligence + gateway boundary
-  - Gateway + Master node
+  - Compute Node
   - Prioritize security, observability, and connectivity resilience
 
 ## 5. Hardware Architecture Diagram
 
 ```text
                      +-------------------------------------+
-                     |     Gateway + Master Pi 4          |
+                     |       Compute Node Pi 5            |
                      | AP + DHCP + MQTT + Cloud + AI/CTL  |
-                     |            BrainCraft HAT           |
+                     |      Multi-Node Orchestration       |
                      +------------------+------------------+
                                         |
                              Private 2.4 GHz WLAN
-             +--------------------------+--------------------------+
-             |                                                     |
+             +-----------------------+--------------------------+----------------------+
+             |                       |                          |                      |
 +------------+------------+                           +------------+------------+
 |      Sensor Pi Zero     |                           |        UI Pi Zero       |
 |    Camera + VoiceHat    |                           |     Pirate Audio HAT    |
 |   Video/Audio TX + LED  |                           |  Display/Buttons/Speaker|
 +-------------------------+                           +-------------------------+
+                   +-------------------------+
+                   |     Sensor Pi 4 QNX     |
+                   |      BrainCraft HAT     |
+                   | RT Fusion + Local AI    |
+                   +-------------------------+
 ```
 
 ## 6. Reliability and Serviceability Notes
@@ -96,6 +109,6 @@
 
 - WLAN protected with WPA2 passphrase.
 - MQTT broker requires authentication.
-- Only the Gateway + Master node communicates with Cloud Node over TLS/mTLS.
+- Only the Compute Node communicates with Cloud Node over TLS/mTLS.
 - OTA artifacts and manifests must be signed and verified before install.
 - Limit inbound firewall exposure to maintenance channels.

@@ -3,7 +3,7 @@
 
 This document defines a dedicated Cloud Node for the distributed Pi-based ADAS/AV system.
 
-The Cloud Node is not a physical Raspberry Pi device. It is a cloud-side service plane that receives data from the Gateway + Master Pi 4 and provides fleet-level control.
+The Cloud Node is not a physical Raspberry Pi device. It is a cloud-side service plane that receives data from the Compute Node (Pi 5) and provides fleet-level control.
 
 ---
 
@@ -11,7 +11,7 @@ The Cloud Node is not a physical Raspberry Pi device. It is a cloud-side service
 
 - Centralized telemetry ingestion and storage
 - Structured logging for fleet diagnostics and incident analysis
-- Secure OTA update orchestration for Sensor/UI/Gateway nodes
+- Secure OTA update orchestration for Sensor Linux/Sensor QNX/UI/Compute nodes
 - Device registry, version tracking, and rollout management
 - Alerting and dashboarding for operational visibility
 
@@ -20,12 +20,12 @@ The Cloud Node is not a physical Raspberry Pi device. It is a cloud-side service
 ## 2. Role in Overall Architecture
 
 ```text
-Sensor Pi Zero + UI Pi Zero  <----local LAN---->  Gateway + Master Pi 4  <----TLS---->  Cloud Node
+Sensor Linux Node + Sensor QNX Node + UI Node  <----local LAN---->  Compute Node (Pi 5)  <----TLS---->  Cloud Node
 ```
 
 Responsibilities split:
 - Edge nodes (Pi Zero): real-time media and control
-- Gateway + Master (Pi 4): aggregation, local decision logic, cloud bridge
+- Compute Node (Pi 5): aggregation, local decision logic, cloud bridge
 - Cloud Node: long-term storage, OTA policy, telemetry analytics, fleet ops
 
 Design rule:
@@ -45,7 +45,7 @@ Stores per-device metadata:
 
 ### 3.2 Telemetry Ingestion
 
-Receives from Pi 4 cloud bridge:
+Receives from Pi 5 cloud bridge:
 - system health heartbeat
 - perception events (lane, motion, object detections)
 - audio event statistics
@@ -127,7 +127,7 @@ Manages software/firmware updates with staged rollout:
 ## 5. OTA Workflow
 
 1. Publish signed manifest to cloud/ota/manifest.
-2. Gateway + Master fetches and validates signature/checksum.
+2. Compute Node fetches and validates signature/checksum.
 3. Gateway applies preflight checks on each target node.
 4. Deploy to canary group first.
 5. Collect cloud/ota/status and error metrics.
@@ -161,7 +161,7 @@ Recommended fields:
 ### 6.3 Cost and Bandwidth Controls
 
 - Edge-side log sampling for high-frequency events
-- Compress batched uploads from Pi 4
+- Compress batched uploads from Pi 5
 - Send summaries by default, full dump on demand
 
 ---
@@ -186,14 +186,14 @@ Alert thresholds (example):
 
 ## 8. Security Requirements
 
-- Mutual TLS between Pi 4 cloud bridge and Cloud Node
+- Mutual TLS between Pi 5 cloud bridge and Cloud Node
 - Signed OTA artifacts and manifest verification
 - Least-privilege service accounts per gateway
 - Immutable audit log for OTA and critical control actions
 - Secret rotation policy for keys and tokens
 
 Security boundary:
-- Only Gateway + Master Pi 4 communicates directly with Cloud Node.
+- Only Compute Node (Pi 5) communicates directly with Cloud Node.
 - Pi Zero nodes remain inside local WLAN control domain.
 
 ---
@@ -217,7 +217,7 @@ Vendor-neutral options:
 ## 10. Integration Plan for This Project
 
 ### Step 1: Baseline Telemetry
-- Send system/status heartbeat from Pi 4 every 2-5 seconds
+- Send system/status heartbeat from Pi 5 every 2-5 seconds
 - Store CPU, memory, stream FPS, packet loss
 
 ### Step 2: Structured Logging
@@ -225,7 +225,7 @@ Vendor-neutral options:
 - Upload rotated log bundles every 1-5 minutes
 
 ### Step 3: OTA MVP
-- Implement manifest fetch + checksum verify on Pi 4
+- Implement manifest fetch + checksum verify on Pi 5
 - Roll updates to one canary node first, then full rollout
 
 ### Step 4: Dashboard + Alerts

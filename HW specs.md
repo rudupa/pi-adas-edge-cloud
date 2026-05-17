@@ -3,9 +3,10 @@
 ## Table of Contents
 
 - [1. Node Inventory](#1-node-inventory)
-  - [Sensor Node](#sensor-node)
+  - [Sensor Node - Pi Zero W](#sensor-node---pi-zero-w)
+  - [Sensor Node - Pi 4 (QNX)](#sensor-node---pi-4-qnx)
   - [UI Node](#ui-node)
-  - [Gateway + Master Node](#gateway--master-node)
+  - [Compute Node](#compute-node)
 - [2. Connectivity and Buses](#2-connectivity-and-buses)
 - [3. Performance Targets and Constraints](#3-performance-targets-and-constraints)
 - [4. Power and Thermal Guidance](#4-power-and-thermal-guidance)
@@ -18,7 +19,7 @@
 
 ## 1. Node Inventory
 
-### Sensor Node
+### Sensor Node - Pi Zero W
 - Board: Raspberry Pi Zero W v1.1 (x1)
 - Pi Zero W v1.1 core specs:
   - 1GHz single-core CPU
@@ -37,10 +38,41 @@
   - Three onboard DotStar RGB LEDs (status/feedback)
   - Onboard push button and privacy switch
   - STEMMA QT (I2C) + 3-pin JST STEMMA expansion
+- OS: Buildroot Linux
 - Primary roles:
   - Camera capture and low-latency video streaming
   - Microphone capture and low-latency audio streaming
   - LED status/control using 3 onboard RGB LEDs
+
+### Sensor Node - Pi 4 (QNX)
+- Board: Raspberry Pi 4 (x1)
+- Pi 4 core specs:
+  - Broadcom BCM2711, quad-core Cortex-A72 (64-bit) @ up to 1.8GHz
+  - LPDDR4 RAM options (1GB/2GB/4GB/8GB; choose per AI workload)
+  - Dual-band Wi-Fi (2.4GHz/5GHz 802.11ac), Bluetooth 5.0 + BLE
+  - Gigabit Ethernet
+  - 2x USB 3.0 + 2x USB 2.0
+  - 2x micro-HDMI (up to 4kp60)
+  - 40-pin GPIO, MIPI CSI camera, MIPI DSI display
+  - USB-C power input (5V, 3A recommended)
+- AI HAT: BrainCraft HAT
+- BrainCraft HAT hardware details:
+  - 1.54in IPS TFT display, 240x240 resolution
+  - Left + right microphone channels
+  - Stereo headphone output
+  - Stereo 1W speaker output terminals
+  - Three RGB DotStar LEDs
+  - 5-way joystick + button (local UI input)
+  - Two 3-pin JST STEMMA connectors (PWM-capable expansion)
+  - STEMMA QT / I2C connector (also Grove I2C compatible with adapter)
+  - Audio privacy on/off switch (hardware audio disable)
+  - Controllable fan for thermal support during inference workloads
+- OS: QNX Neutrino RTOS
+- Primary roles:
+  - Real-time audio/video capture with QNX deterministic scheduling
+  - AI/ML inference for autonomous decision-making
+  - Local policy enforcement with hard real-time guarantees
+  - Sensor fusion and data aggregation
 
 ### UI Node
 - Board: Raspberry Pi Zero W v1.1 (x1)
@@ -64,37 +96,27 @@
   - Button event capture
   - Optional local voice input forwarding
 
-### Gateway + Master Node
-- Board: Raspberry Pi 4 (x1)
-- AI HAT: BrainCraft HAT
-- BrainCraft HAT hardware details:
-  - 1.54in IPS TFT display, 240x240 resolution
-  - Left + right microphone channels
-  - Stereo headphone output
-  - Stereo 1W speaker output terminals
-  - Three RGB DotStar LEDs
-  - 5-way joystick + button (local UI input)
-  - Two 3-pin JST STEMMA connectors (PWM-capable expansion)
-  - STEMMA QT / I2C connector (also Grove I2C compatible with adapter)
-  - Audio privacy on/off switch (hardware audio disable)
-  - Controllable fan for thermal support during inference workloads
-- Raspberry Pi 4 hardware details:
-  - Broadcom BCM2711, quad-core Cortex-A72 (64-bit) @ up to 1.8GHz
-  - LPDDR4 RAM options (1GB/2GB/4GB/8GB; choose per AI workload)
+### Compute Node
+- Board: Raspberry Pi 5 (x1)
+- Raspberry Pi 5 hardware details:
+  - Broadcom BCM2712, quad-core Cortex-A76 (64-bit) @ 2.4GHz
+  - LPDDR5 RAM options (4GB/8GB; choose per orchestration/AI workload)
   - Dual-band Wi-Fi (2.4GHz/5GHz 802.11ac), Bluetooth 5.0 + BLE
   - Gigabit Ethernet
   - 2x USB 3.0 + 2x USB 2.0
-  - 2x micro-HDMI (up to 4kp60)
+  - 2x micro-HDMI (up to 4kp120)
   - 40-pin GPIO, MIPI CSI camera, MIPI DSI display
-  - USB-C power input (5V, 3A recommended)
+  - USB-C power input (5V, 5A recommended)
+- Optional AI HAT: BrainCraft HAT (if local display/audio needed)
+- OS: Linux distro optimized for AI runtime
 - Primary roles:
-  - Wi-Fi AP (hostapd + dnsmasq)
+  - Wi-Fi AP (hostapd + dnsmasq) serving multiple sensor nodes
   - MQTT broker (Mosquitto)
-  - Device discovery and message routing
+  - Device discovery and message routing (multi-node management)
   - Cloud bridge and telemetry upload
-  - AI/voice inference
-  - Decision logic and orchestration
-  - Command and policy engine
+  - Centralized AI/voice inference coordination
+  - Multi-node orchestration and state management
+  - Command and policy engine with QNX sensor node coordination
 
 ## 2. Connectivity and Buses
 
@@ -113,14 +135,18 @@
 - DAC control: BCM 25 enable line (Pirate Audio software flow)
 - Wi-Fi 2.4 GHz: Stream reception + control uplink
 
-### Gateway + Master Pi 4
+### Compute Node Pi 5
 - Wi-Fi AP mode: Infrastructure for node connectivity
 - Ethernet (Gigabit): Uplink to WAN/cloud
 - USB/storage (optional): Local logging buffer
+- Optional BrainCraft display/audio/local controls when HAT is installed
+
+### Sensor Pi 4 (QNX)
 - BrainCraft display: SPI-attached 240x240 local status/inference UI
 - BrainCraft audio: stereo mic input + stereo headphone/speaker output
 - BrainCraft local controls: 5-way joystick/button + 3x DotStar RGB LEDs
 - BrainCraft expansion: 2x JST STEMMA + 1x STEMMA QT I2C port
+- MQTT uplink: deterministic telemetry/control exchange with gateway
 
 ## 3. Performance Targets and Constraints
 
@@ -142,21 +168,23 @@ See [power management.md](power%20management.md) for full per-node power budgets
 ## 5. Storage and Boot Media
 
 - OS for Pi Zero nodes: Buildroot image on microSD
-- OS for Pi 4 node: Raspberry Pi OS Lite or custom Linux image
+- OS for Sensor Pi 4 node: QNX Neutrino image/artifact on microSD
+- OS for Compute Pi 5 node: Raspberry Pi OS Lite or custom Linux image
 - Use high-endurance microSD where possible
 - Keep logs bounded and rotate aggressively to reduce write wear
 
 ## 6. Recommended Bill of Materials (Core)
 
 - Raspberry Pi Zero W x2
-- Raspberry Pi 4 x1
+- Raspberry Pi 4 x1 (Sensor QNX)
+- Raspberry Pi 5 x1 (Gateway)
 - Camera module compatible with Pi Zero CSI x1
 - Adafruit Voice Bonnet x1
 - Pirate Audio HAT (3W Stereo Amp variant) x1
 - Speakers for Pirate Audio output x1 pair
 - BrainCraft HAT x1
-- microSD cards x3 (size per image/logging plan)
-- 5V power supplies x3
+- microSD cards x4 (size per image/logging plan)
+- 5V power supplies x4
 - Mechanical mounting, standoffs, and cable set
 
 ## 7. Hardware Acceptance Checklist
@@ -166,8 +194,8 @@ See [power management.md](power%20management.md) for full per-node power budgets
 - Voice Bonnet left/right mic channels record valid stereo audio
 - Voice Bonnet 3x RGB LEDs are software controllable
 - Pirate Audio display/buttons/speaker are functional
-- Gateway + Master node AP assigns DHCP leases to all nodes
-- Gateway + Master node receives control events and sends commands
+- Compute Node AP assigns DHCP leases to all nodes
+- Compute Node receives control events and sends commands
 
 ## 8. Bandwidth Planning
 

@@ -1,5 +1,5 @@
 # Audio Usage in ADAS and AV Systems
-## Practical Guide for Pi Zero + Pi 4 Architecture
+## Practical Guide for Pi Zero + Pi 4 QNX + Pi 5 Architecture
 
 This document explains how audio is used in ADAS and autonomous vehicle (AV) style systems, and maps those patterns to this project.
 
@@ -86,10 +86,14 @@ Design goals:
 
 ### Sensor Pi Zero
 - Captures mic input (Voice Bonnet path)
-- Streams encoded audio to UI and/or Pi 4
+- Streams encoded audio to UI and/or Compute Pi 5
 - Can run lightweight trigger logic (for example threshold/event gating)
 
-### Gateway + Master Pi 4
+### Sensor Pi 4 (QNX)
+- Captures deterministic real-time sensor audio/events
+- Runs local policy and publishes prioritized MQTT events to Compute Pi 5
+
+### Compute Node Pi 5
 - Performs heavier analysis (speech recognition, context logic)
 - Converts detections/state to audio event commands
 - Publishes event commands over MQTT

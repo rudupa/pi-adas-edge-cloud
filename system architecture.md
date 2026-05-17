@@ -2,16 +2,29 @@
 
 ## Table of Contents
 
-- [1. Design Goals](#1-design-goals)
-- [2. Software Stack by Node](#2-software-stack-by-node)
-- [3. Runtime Data Flow](#3-runtime-data-flow)
-- [4. Protocol and Topic Architecture](#4-protocol-and-topic-architecture)
-- [5. Boot and Startup Strategy](#5-boot-and-startup-strategy)
-- [6. Repository and Process Layout](#6-repository-and-process-layout)
-- [7. Observability and Operations](#7-observability-and-operations)
-- [8. Security Model](#8-security-model)
-- [9. Delivery Plan (Implementation Phases)](#9-delivery-plan-implementation-phases)
-- [10. Risk Notes and Mitigations](#10-risk-notes-and-mitigations)
+- [System Architecture](#system-architecture)
+  - [Table of Contents](#table-of-contents)
+  - [1. Design Goals](#1-design-goals)
+  - [2. Software Stack by Node](#2-software-stack-by-node)
+    - [Sensor Node - Pi Zero W (Linux)](#sensor-node---pi-zero-w-linux)
+    - [Sensor Node - Pi 4 (QNX Neutrino RTOS)](#sensor-node---pi-4-qnx-neutrino-rtos)
+    - [UI Node (Pi Zero W)](#ui-node-pi-zero-w)
+    - [Compute Node (Pi 5)](#compute-node-pi-5)
+    - [Cloud Node (Managed or Self-Hosted)](#cloud-node-managed-or-self-hosted)
+  - [3. Runtime Data Flow](#3-runtime-data-flow)
+  - [4. Protocol and Topic Architecture](#4-protocol-and-topic-architecture)
+    - [Media protocols](#media-protocols)
+    - [Control protocol](#control-protocol)
+    - [Service discovery](#service-discovery)
+  - [5. Boot and Startup Strategy](#5-boot-and-startup-strategy)
+    - [Pi Zero boot optimization](#pi-zero-boot-optimization)
+    - [Service ordering](#service-ordering)
+  - [6. Repository and Process Layout](#6-repository-and-process-layout)
+    - [Language split](#language-split)
+  - [7. Observability and Operations](#7-observability-and-operations)
+  - [8. Security Model](#8-security-model)
+  - [9. Delivery Plan (Implementation Phases)](#9-delivery-plan-implementation-phases)
+  - [10. Risk Notes and Mitigations](#10-risk-notes-and-mitigations)
 
 ---
 
@@ -24,7 +37,7 @@
 
 ## 2. Software Stack by Node
 
-### Sensor Node (Pi Zero W)
+### Sensor Node - Pi Zero W (Linux)
 - OS: Buildroot (minimal image, BusyBox init)
 - Services:
   - `video_streamer`
@@ -32,6 +45,17 @@
   - `device_control` (LED GPIO)
   - `mqtt_client` (status + command channel)
 - Init: Auto-start via `/etc/init.d/`
+
+### Sensor Node - Pi 4 (QNX Neutrino RTOS)
+- OS: QNX Neutrino RTOS (deterministic, real-time scheduling)
+- Services:
+  - `audio_capture` (real-time audio acquisition, hard guarantees)
+  - `sensor_fusion` (deterministic sensor aggregation with QNX scheduling)
+  - `local_policy_engine` (hard real-time decision-making)
+  - `mqtt_client` (status + command uplink to gateway)
+  - Hardware monitoring (thermal, CPU, watchdog)
+- Init: QNX init via procnto startup script
+- Key advantage: Deterministic real-time behavior with microsecond-level latency guarantees
 
 ### UI Node (Pi Zero W)
 - OS: Buildroot (minimal image)
@@ -42,18 +66,20 @@
   - `mqtt_client`
 - UI path: Framebuffer/SDL (no X11/Wayland)
 
-### Gateway + Master Node (Pi 4)
+### Compute Node (Pi 5)
 - OS: Linux distro optimized for AI runtime
 - Services:
-  - hostapd
-  - dnsmasq
-  - Mosquitto MQTT broker
-  - monitoring agent
+  - hostapd (Wi-Fi AP for multi-node mesh)
+  - dnsmasq (DNS/DHCP for sensor node discovery)
+  - Mosquitto MQTT broker (multi-node message broker)
+  - monitoring agent (fleet-wide telemetry)
   - cloud bridge agent
-  - orchestration engine
+  - multi-node orchestration engine (Linux + QNX node management)
   - voice recognition (Vosk preferred for offline)
-  - decision logic
-  - command publisher (MQTT)
+  - decision logic and coordination
+  - command publisher (MQTT to all nodes)
+  - QNX sensor node integration layer (cross-platform messaging)
+- Key upgrade: Pi 5 provides additional CPU cores and memory for managing multiple sensor nodes concurrently
 
 ### Cloud Node (Managed or Self-Hosted)
 - Runtime: cloud VM/container platform
@@ -68,22 +94,31 @@
 ## 3. Runtime Data Flow
 
 ```text
-Sensor Pi Zero:
+Sensor Pi Zero (Linux):
   video_streamer  ----UDP/MJPEG---->  UI Pi Zero (display)
-  audio_streamer  ----UDP/Opus----->  UI Pi Zero (speaker) / Gateway+Master Pi
-  LED control     <---MQTT cmd------  Gateway+Master/UI logic
+  audio_streamer  ----UDP/Opus----->  UI Pi Zero (speaker) / Compute Pi 5
+  LED control     <---MQTT cmd------  Compute Pi 5 orchestration logic
+  status telemetry ----MQTT pub------> Compute Pi 5 broker
+
+Sensor Pi 4 (QNX):
+  audio_capture   ----MQTT pub------> Compute Pi 5 broker (sensor fusion input)
+  local_policy    ----MQTT events---> Compute Pi 5 coordination
+  hard RT decisions <---MQTT cmd-----  Compute Pi 5 orchestration (if needed)
+  sensor_fusion output ----MQTT-----> Compute Pi 5 decision engine
 
 UI Pi Zero:
-  button_input    ----MQTT event----> Gateway+Master Pi
+  button_input    ----MQTT event----> Compute Pi 5
 
-Gateway+Master Pi:
-  control logic   ----MQTT cmd------> Sensor/UI nodes
-  cloud bridge    ----TLS MQTT/HTTPS-> Cloud Node
+Compute Pi 5:
+  multi-node coordination <---MQTT pub--- (all sensor/UI nodes)
+  control logic   ----MQTT cmd------> Sensor (Linux) / UI nodes
+  QNX integration ----MQTT/IPC-----> Sensor Pi 4 (QNX) cross-platform mesh
+  cloud uplink    ----HTTPS/MQTT TLS-> Cloud node
 
 Cloud Node:
-  telemetry ingest <----TLS---------- Gateway+Master Pi
-  OTA policy       ----TLS----------> Gateway+Master Pi
-  logs + metrics   <----TLS---------- Gateway+Master Pi
+  telemetry ingest <----TLS---------- Compute Pi 5
+  OTA policy       ----TLS----------> Compute Pi 5
+  logs + metrics   <----TLS---------- Compute Pi 5
 ```
 
 ## 4. Protocol and Topic Architecture
@@ -166,14 +201,14 @@ Cloud Node:
 - Audio Sensor -> UI
 
 3. Control
-- UI button event -> Gateway + Master
-- Gateway + Master command -> Sensor LED action
+- UI button event -> Compute Node
+- Compute Node command -> Sensor LED action
 
 4. Gateway core
 - AP mode + DHCP + MQTT broker
 
 5. Brain services on same node
-- Voice command processing on Gateway + Master
+- Voice command processing on Compute Node
 - Decision loop and command publishing
 
 6. Cloud

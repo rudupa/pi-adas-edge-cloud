@@ -2,14 +2,15 @@
 
 ## Overview
 
-This guide covers setting up the build host for generating Linux images for all
-three edge nodes in the pi-adas-edge-cloud system:
+This guide covers setting up the build host for generating Linux and QNX artifacts
+for all edge nodes in the pi-adas-edge-cloud system:
 
 | Node    | Hardware              | Architecture |
 |---------|----------------------|--------------|
-| Sensor  | Raspberry Pi Zero W  | ARMv6l / BCM2835 |
+| Sensor (Linux)  | Raspberry Pi Zero W  | ARMv6l / BCM2835 |
+| Sensor (QNX)  | Raspberry Pi 4 Model B  | ARM64 / BCM2711 |
 | UI      | Raspberry Pi Zero W  | ARMv6l / BCM2835 |
-| Gateway | Raspberry Pi 4 Model B | AArch32 (ARMv8-A 32-bit) / BCM2711 (Cortex-A72) |
+| Gateway | Raspberry Pi 5 Model B | ARM64 / BCM2712 (Cortex-A76) |
 
 ---
 
@@ -42,7 +43,7 @@ sudo apt install -y \
 ### Disk Space
 
 - **Minimum**: 50 GB free per node build (Buildroot output can be large)
-- **Recommended**: 200+ GB for all 3 nodes simultaneously
+- **Recommended**: 250+ GB for all nodes simultaneously
 
 ---
 
@@ -79,14 +80,15 @@ bash scripts/build-node.sh gateway v0.1.0 out/gateway
 ### All nodes (via CI)
 
 The GitHub Actions workflow `.github/workflows/build-all-nodes.yml` runs builds
-in parallel for all three nodes.
+in parallel for all edge nodes.
 
 ---
 
 ## Toolchain
 
 - **Pi Zero W (sensor/ui):** `arm-linux-gnueabihf` (ARMv6 + hard-float ABI)
-- **Pi 4 (gateway):** `arm-linux-gnueabihf` (ARMv7 compatible)
+- **Pi 5 (gateway):** `aarch64-linux-gnu` (ARM64)
+- **Pi 4 (sensor-qnx):** QNX SDK toolchain (ARM64)
 - Both use the Buildroot-managed internal toolchain from `build/buildroot-src/`
 
 ### Build Time Estimates

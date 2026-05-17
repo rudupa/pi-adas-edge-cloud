@@ -984,7 +984,7 @@ target_include_directories(video-pipeline PRIVATE ${GST_INCLUDE_DIRS})
 target_link_libraries(video-pipeline PRIVATE ${GST_LIBRARIES})
 ```
 
-### CMakeLists.txt (top-level gateway node)
+### CMakeLists.txt (top-level compute node)
 
 ```cmake
 cmake_minimum_required(VERSION 3.16)

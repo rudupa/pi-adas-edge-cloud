@@ -28,14 +28,14 @@
 
 **Key Acceleration Strategies:**
 1. **Parallelization:** Buildroot builds, service development, documentation can run in parallel
-2. **Templating:** Reuse config patterns across nodes (sensor/UI share base, gateway adds Pi 4 specifics)
+2. **Templating:** Reuse config patterns across nodes (sensor-linux/UI share base, gateway adds Pi 5 specifics, sensor-qnx uses QNX templates)
 3. **Automation:** Smoke tests, security audits, latency measurements run without human intervention
 4. **Incremental Validation:** Validate each service as built, not at end
 5. **External Dependencies:** Use pre-built Buildroot configurations from Raspberry Pi foundation, reuse existing drivers
 
 **Critical Path:**
 1. Buildroot setup + base configs (blocking)
-2. Sensor/UI/Gateway image builds (parallelizable after 1)
+2. Sensor-linux/Sensor-qnx/UI/Gateway image builds (parallelizable after 1)
 3. Hardware tests (parallelizable with builds)
 4. Services (depends on working images)
 5. OTA + security (depends on services)
@@ -311,7 +311,7 @@ PHASE 8–9 (Weeks 13–14, depends on all above)
    - CONFIG_I2C_BCM2835
    - CONFIG_SPI_BCM2835
    
-   ## Gateway (Pi 4, ARMv7l)
+   ## Compute (Pi 5, ARM64)
    - CONFIG_THERMAL
    - CONFIG_MAC80211 (WiFi AP)
    - CONFIG_CGROUPS (future containers)
@@ -329,7 +329,7 @@ PHASE 8–9 (Weeks 13–14, depends on all above)
 
 ### PHASE 1: Per-Node Linux Image Building (Weeks 2–3, Parallelizable)
 
-**Goal:** Three bootable Linux images for Sensor, UI, and Gateway nodes.
+**Goal:** Three bootable Linux images for Sensor, UI, and Compute nodes.
 
 #### Task 1a.1: Sensor Buildroot Defconfig
 
@@ -483,11 +483,11 @@ PHASE 8–9 (Weeks 13–14, depends on all above)
 
 ---
 
-#### Tasks 1b & 1c: UI and Gateway (Parallel)
+#### Tasks 1b & 1c: UI and Compute (Parallel)
 
 **Similar structure to Task 1a, adapted for:**
 - **UI:** Pirate Audio HAT (ST7789 display, MAX98357A amp) — similar to Sensor but for output
-- **Gateway:** Pi 4 specifics (ARMv7, 4-8GB RAM) — larger rootfs, AI runtime, AP support
+- **Gateway:** Pi 5 specifics (ARM64, 4-8GB RAM) — larger rootfs, AI runtime, AP support
 
 **Deliverable per node:**
 - Buildroot defconfig
@@ -1349,7 +1349,7 @@ if build_timeout:
 | Week | Stream | Deliverable | Status |
 |------|--------|-------------|--------|
 | 1 | A | Buildroot setup, base configs | Ready to execute |
-| 2 | A, C | Sensor/UI/Gateway Buildroot configs, test framework | Ready to execute |
+| 2 | A, C | Sensor-linux/Sensor-qnx/UI/Gateway configs, test framework | Ready to execute |
 | 3 | A, C | 3 Linux images, hardware tests | Ready to execute |
 | 4 | C | WiFi + MQTT integration tests | Ready to execute |
 | 5–7 | B | Video/audio/MQTT services, integration tests | Ready to execute |

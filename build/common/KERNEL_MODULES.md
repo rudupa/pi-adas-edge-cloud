@@ -36,11 +36,11 @@ This document lists the Linux kernel configuration options required per node.
 
 ---
 
-## Gateway (Raspberry Pi 4, ARMv7l / BCM2711)
+## Compute (Raspberry Pi 5, ARM64 / BCM2712)
 
 ### Core
 - `CONFIG_ARCH_BCM2835=y`
-- `CONFIG_SOC_BCM2711=y`           – Pi 4 SoC
+- `CONFIG_SOC_BCM2712=y`           – Pi 5 SoC
 - `CONFIG_GPIO_RASPBERRYPI=y`      – GPIO USB power control
 
 ### Wireless AP

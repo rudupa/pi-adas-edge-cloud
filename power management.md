@@ -5,8 +5,9 @@
 - [1. Power and Thermal Guidance](#1-power-and-thermal-guidance)
 - [2. Per-Node Power Requirements](#2-per-node-power-requirements)
   - [Sensor Node](#sensor-node-pi-zero-w-v11)
+  - [Sensor Node (QNX)](#sensor-node-qnx-pi-4--braincraft-hat)
   - [UI Node](#ui-node-pi-zero-w-v11)
-  - [Gateway + Master Node](#gateway--master-node-pi-4)
+  - [Compute Node](#compute-node-pi-5)
 - [3. Storage Wear and Power-Safe Shutdown](#3-storage-wear-and-power-safe-shutdown)
 - [4. Power Budget Summary](#4-power-budget-summary)
 
@@ -16,7 +17,7 @@
 
 - Use stable 5V power supplies with current headroom on all nodes
 - Prefer short, high-quality USB power cables for Pi Zero stability
-- Add thermal management (heatsink/fan) for Pi 4 nodes under AI load
+- Add thermal management (heatsink/fan) for Pi 4/Pi 5 nodes under AI load
 - Consider brownout-safe design for field deployments
 
 ## 2. Per-Node Power Requirements
@@ -29,6 +30,14 @@
   - Voice Bonnet adds ~50–100 mA draw during active audio
   - Use high-quality short cable to avoid voltage drop brownouts
 
+### Sensor Node (QNX Pi 4 + BrainCraft HAT)
+- Supply voltage: 5V via USB-C
+- Typical current draw: 500–900 mA idle, up to 2.5 A under active processing + fan
+- Recommended supply: 5V / 3A minimum
+- Notes:
+  - BrainCraft fan and display increase peak transients
+  - Reserve thermal margin for deterministic workloads
+
 ### UI Node (Pi Zero W v1.1)
 - Supply voltage: 5V via micro-USB
 - Typical current draw: 150–300 mA idle, up to 500 mA under Wi-Fi + display load
@@ -37,12 +46,12 @@
   - Pirate Audio amplifier adds up to ~600 mA per channel at 3W (speaker output)
   - Size supply to cover combined Pi Zero + amplifier peak
 
-### Gateway + Master Node (Pi 4)
+### Compute Node (Pi 5)
 - Supply voltage: 5V via USB-C
-- Typical current draw: 600 mA idle, up to 2.5–3 A under full CPU + Wi-Fi + BrainCraft load
-- Recommended supply: 5V / 3A (official Raspberry Pi USB-C supply)
+- Typical current draw: 700 mA idle, up to 4–5 A under full CPU + Wi-Fi + orchestration load
+- Recommended supply: 5V / 5A (official Raspberry Pi 5 USB-C PD supply)
 - Notes:
-  - BrainCraft HAT fan adds ~100–200 mA during active cooling
+  - Optional HAT fan adds additional transient draw
   - PoE HAT (optional) can replace USB-C supply for cleaner cabling
 
 ## 3. Storage Wear and Power-Safe Shutdown
@@ -57,5 +66,6 @@
 | Node             | Idle (typical) | Peak (max)  | Recommended Supply |
 |------------------|---------------|-------------|-------------------|
 | Sensor Pi Zero W | ~200 mA       | ~600 mA     | 5V / 2A           |
+| Sensor Pi 4 (QNX) | ~700 mA      | ~2.5 A      | 5V / 3A           |
 | UI Pi Zero W     | ~200 mA       | ~900 mA     | 5V / 2A           |
-| Gateway+Master Pi 4 | ~600 mA    | ~3 A        | 5V / 3A           |
+| Compute Node Pi 5 | ~700 mA    | ~5 A        | 5V / 5A           |

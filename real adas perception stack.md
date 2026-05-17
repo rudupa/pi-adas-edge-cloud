@@ -1,11 +1,11 @@
 # Real ADAS Perception Stack (Mini, Pi-Class)
-## Practical Design for Pi Zero + Pi 4
+## Practical Design for Pi Zero + Pi 4 QNX + Pi 5
 
-This document defines a realistic, embedded ADAS-style perception pipeline for the current three-node Raspberry Pi architecture.
+This document defines a realistic, embedded ADAS-style perception pipeline for the current multi-node Raspberry Pi architecture.
 
 Scope:
 - Build a feasible mini perception stack on Pi Zero class hardware
-- Offload heavy AI to Pi 4 (brain/gateway)
+- Split heavy AI between Sensor Pi 4 (QNX) and Compute Pi 5 (brain/compute)
 - Tune camera streaming for 50-100 ms end-to-end latency where possible
 
 ---
@@ -15,7 +15,8 @@ Scope:
 A Pi Zero W cannot run modern full-scale ADAS DNN workloads at production frame rates. The correct approach is a compressed pipeline:
 
 - Pi Zero Sensor: capture + lightweight CV + encode + transmit
-- Pi 4 Brain: heavy inference + decision logic
+- Pi 4 QNX Sensor: deterministic preprocessing and local fusion
+- Pi 5 Gateway: heavy inference + decision logic
 - Pi Zero UI: decode + render + operator interaction
 
 This mirrors early automotive ECU partitioning: sensor front-end, central compute, and HMI node.
@@ -71,7 +72,7 @@ Avoid transmitting heavy intermediate tensors.
 On Sensor node:
 - Draw minimal overlays locally if needed
 - Encode with hardware H.264
-- Send over UDP/RTP to UI and/or Pi 4 consumers
+- Send over UDP/RTP to UI and/or Pi 5 consumers
 
 ---
 
@@ -81,8 +82,8 @@ On Sensor node:
 |------|------|
 | Camera capture | Pi Zero Sensor |
 | Lightweight CV (lane, motion, small detector) | Pi Zero Sensor |
-| Heavy AI inference | Pi 4 Brain/Gateway |
-| Decision logic and event fusion | Pi 4 Brain/Gateway |
+| Heavy AI inference | Pi 5 Gateway + Sensor Pi 4 QNX |
+| Decision logic and event fusion | Pi 5 Gateway |
 | Display and controls | Pi Zero UI |
 
 This split improves determinism, keeps the sensor loop lean, and aligns with embedded ADAS design practice.
@@ -225,10 +226,11 @@ In this project, tuned Wi-Fi with strict buffering discipline can still provide 
 - Button input and local UI feedback
 - MQTT event publish/subscribe
 
-### Pi 4 Brain/Gateway
+### Pi 5 Gateway + Sensor Pi 4 QNX
 - Heavy inference workloads
-- Decision logic/state machine
-- Wi-Fi AP + DHCP + MQTT broker
+- Decision logic/state machine on Pi 5
+- Deterministic preprocessing/fusion on Sensor Pi 4 QNX
+- Wi-Fi AP + DHCP + MQTT broker (Pi 5)
 - Cloud synchronization/telemetry bridge
 
 ---
@@ -239,5 +241,5 @@ Minimum for milestone completion:
 - Stable capture and stream at 640x480 with tuned H.264
 - Measured end-to-end latency <= 100 ms in controlled Wi-Fi conditions
 - Lane or motion feature running continuously on Sensor node
-- Heavy AI path executed on Pi 4 without stalling Sensor stream loop
+- Heavy AI path executed on Pi 5/Sensor QNX without stalling Sensor stream loop
 - UI node shows live stream and can emit control events via MQTT

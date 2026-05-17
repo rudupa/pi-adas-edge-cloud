@@ -1,24 +1,25 @@
 # Repo Blueprint
-## Unified Monorepo for 4-Node System
+## Unified Monorepo for 5-Node System
 
 Recommended repository name:
 **pi-adas-edge-cloud**
 
 Why this name:
 - Includes both edge and cloud scope
-- Maps cleanly to your 4-node architecture
+- Maps cleanly to your multi-node edge + cloud architecture
 - Short, searchable, and release-friendly
 
 ---
 
-## 1. Can One Repo Build All 4 Nodes?
+## 1. Can One Repo Build All Nodes?
 
 Yes. A single monorepo should produce all deployables with target-specific pipelines.
 
 Artifacts by node:
-- Sensor node: bootable image (Buildroot output)
+- Sensor Linux node: bootable image (Buildroot output)
+- Sensor QNX node: bootable image/artifact (QNX output)
 - UI node: bootable image (Buildroot output)
-- Gateway node: bootable image (Pi 4 OS image)
+- Compute node: bootable image (Pi 5 OS image)
 - Cloud node: container image(s) + deployment manifests
 
 Important:
@@ -40,8 +41,11 @@ pi-adas-edge-cloud/
     cloud node.md
 
   build/
-    sensor/
+    sensor-linux/
       buildroot/
+      output/
+    sensor-qnx/
+      qnx-bsp/
       output/
     ui/
       buildroot/
@@ -53,7 +57,10 @@ pi-adas-edge-cloud/
       manifests/
 
   firmware/
-    sensor/
+    sensor-linux/
+      services/
+      config/
+    sensor-qnx/
       services/
       config/
     ui/
@@ -104,15 +111,16 @@ pi-adas-edge-cloud/
 ## 3. Build Matrix Strategy
 
 Use CI matrix dimensions:
-- target: sensor, ui, gateway, cloud
+- target: sensor-linux, sensor-qnx, ui, gateway, cloud
 - environment: dev, staging, prod
 - architecture:
-  - sensor/ui: armv6
+  - sensor-linux/ui: armv6
+  - sensor-qnx: arm64
   - gateway: arm64
   - cloud: amd64 + arm64 (multi-arch)
 
 Build outputs:
-- sensor/ui/gateway: image artifacts + checksums
+- sensor-linux/sensor-qnx/ui/gateway: image artifacts + checksums
 - cloud: container image digest + deployment bundle
 - all targets: SBOM + version metadata
 
@@ -124,7 +132,8 @@ Single release tag per fleet release:
 - Example: v0.9.0
 
 Per-target artifact naming:
-- sensor-image-v0.9.0.img.xz
+- sensor-linux-image-v0.9.0.img.xz
+- sensor-qnx-image-v0.9.0.img
 - ui-image-v0.9.0.img.xz
 - gateway-image-v0.9.0.img.xz
 - cloud-ingest-v0.9.0 (container image)
@@ -145,7 +154,7 @@ Manifest contract:
 OTA control remains gateway-mediated:
 - Cloud node publishes campaign intent and signed manifest
 - Gateway validates signature/checksum
-- Gateway orchestrates local rollout to Sensor/UI/Gateway nodes
+- Compute node orchestrates local rollout to Sensor Linux/Sensor QNX/UI/Compute nodes
 - Gateway reports status to cloud
 
 Rollout policy:
@@ -178,7 +187,7 @@ Every artifact build should embed:
 - target-specific smoke builds
 
 2. Main branch merge:
-- full matrix build for all 4 targets
+- full matrix build for all targets
 - signed artifacts and checksums
 - internal registry upload
 
@@ -196,7 +205,8 @@ Every artifact build should embed:
 ## 8. Initial Action Plan
 
 1. Create target configs:
-- build/sensor/buildroot/
+- build/sensor-linux/buildroot/
+- build/sensor-qnx/qnx-bsp/
 - build/ui/buildroot/
 - build/gateway/image/
 - cloud/* services

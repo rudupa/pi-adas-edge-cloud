@@ -1,6 +1,6 @@
 # Implementation Plan: pi-adas-edge-cloud Production Deployment
 
-**Objective:** Transform the pi-adas-edge-cloud repository from placeholder build scaffolding to production-ready Linux images for all 4 nodes (Sensor Pi Zero W, UI Pi Zero W, Gateway Pi 4, Cloud runtime) with validated hardware integration, secure OTA, and end-to-end testing.
+**Objective:** Transform the pi-adas-edge-cloud repository from placeholder build scaffolding to production-ready multi-platform artifacts for all nodes (Sensor Pi Zero W Linux, Sensor Pi 4 QNX, UI Pi Zero W Linux, Compute Pi 5 Linux, Cloud runtime) with validated hardware integration, secure OTA, and end-to-end testing.
 
 **Timeline:** 14 weeks (approximate, parallelizable phases)  
 **Success Criteria:** All 4 nodes boot in <5s, pass hardware validation, stream latency <100ms, audio quality ≥4/5, OTA rollback functional, canary fleet metrics passing gates.
@@ -383,22 +383,22 @@
 
 ---
 
-### 1.3 Gateway Node (Pi 4) Buildroot Configuration
+### 1.3 Compute Node (Pi 5) Buildroot Configuration
 
-**Deliverable:** Bootable Linux image for Gateway Pi 4 with MQTT broker, WiFi AP, AI runtime.
+**Deliverable:** Bootable Linux image for Compute Pi 5 with MQTT broker, WiFi AP, multi-node orchestration, and AI runtime.
 
 **Hardware Target:**
-- Raspberry Pi 4 Model B (ARMv7l, 4–8 GB RAM)
-- Adafruit BrainCraft HAT (ST7789 display, PDM mics, speaker, thermal fan)
+- Raspberry Pi 5 Model B (ARM64, 4–8 GB RAM)
+- Optional Adafruit BrainCraft HAT (ST7789 display, PDM mics, speaker, thermal fan)
 - Onboard WiFi (as AP) and Ethernet
 
 **Steps:**
 
-1. **Kernel Configuration** (`build/gateway/kernel.config` – Pi 4 specific):
+1. **Kernel Configuration** (`build/gateway/kernel.config` – Pi 5 specific):
    ```
-   # Pi 4 specific features
+    # Pi 5 specific features
    CONFIG_ARCH_BCM2835=y
-   CONFIG_SOC_BCM2711=y                    # Pi 4 SoC
+    CONFIG_SOC_BCM2712=y                    # Pi 5 SoC
    CONFIG_ARM_ARCH_TIMER=y
    CONFIG_GENERIC_CLOCKEVENTS=y
    
@@ -542,8 +542,8 @@
    ```
 
 **Validation:**
-- Pi 4 Kernel builds without Pi 3 errors (separate defconfig for ARMv7 vs ARMv6)
-- Buildroot build produces `zImage` and `rootfs.tar.gz` for Pi 4
+- Pi 5 kernel builds without compatibility errors (separate defconfig for ARM64 vs ARMv6)
+- Buildroot build produces `zImage` and `rootfs.tar.gz` for gateway
 - MQTT broker starts: `mosquitto -c /etc/mosquitto/mosquitto.conf`
 - WiFi AP appears in scan: `iwlist wlan0 scan`
 - TensorFlow Lite model loads and runs: Python inference script executes
@@ -552,7 +552,7 @@
 
 ### 1.4 Assemble Boot Images (SD Card Image Generation)
 
-**Deliverable:** Flushable `.img` files for all 3 nodes + checksum validation.
+**Deliverable:** Flushable `.img` files/artifacts for all edge nodes + checksum validation.
 
 **Steps:**
 
@@ -577,7 +577,7 @@
    
    # Create empty image file (size = boot partition + root partition)
    # Pi Zero: 128 MB boot + 512 MB root = 640 MB
-   # Pi 4: 512 MB boot + 2 GB root = 2.5 GB
+    # Pi 5: 512 MB boot + 2 GB root = 2.5 GB
    
    BOOT_SIZE_MB=128
    ROOT_SIZE_MB=$(get_root_size_for_node ${NODE})
@@ -821,12 +821,12 @@
    echo "PASS: LEDs and buttons accessible"
    ```
 
-6. **Thermal Test** (`firmware/gateway/hw-tests/thermal-test.sh` for Pi 4):
+6. **Thermal Test** (`firmware/gateway/hw-tests/thermal-test.sh` for Pi 5):
    ```bash
    #!/bin/bash
    set -euo pipefail
    
-   echo "Testing Pi 4 thermal management..."
+    echo "Testing Pi 5 thermal management..."
    
    # Read CPU temperature
    TEMP=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo "0")
@@ -1529,7 +1529,7 @@ cloud/telemetry/log                 # Unified telemetry to cloud
 
 **Stages:**
 1. **Canary (10%):** 1 Pi Zero W (sensor or UI) on latest build
-2. **Beta (30%):** 3 nodes (mix of sensor/UI/gateway)
+2. **Beta (30%):** 4 nodes (sensor-linux, sensor-qnx, UI, gateway mix)
 3. **Production (100%):** All nodes
 
 **Rollback Triggers:**
@@ -1537,7 +1537,7 @@ cloud/telemetry/log                 # Unified telemetry to cloud
 - Audio latency >150ms (measured frame-to-speaker)
 - Video frame drops >5% per min
 - MQTT connection loss >3 consecutive restarts
-- Thermal throttling detected (Pi 4 >85°C sustained)
+- Thermal throttling detected (Pi 5 >85°C sustained)
 
 **Steps:**
 
@@ -1652,7 +1652,7 @@ cloud/telemetry/log                 # Unified telemetry to cloud
 - Deploy v0.2.0 to 1 canary node
 - Monitor metrics for 1 hour: CPU, latency, thermal OK
 - Approve promotion to beta
-- Deploy to 3 nodes, observe healthy metrics
+- Deploy to edge nodes, observe healthy metrics
 - Promote to production
 
 ---
@@ -1907,7 +1907,7 @@ cloud/telemetry/log                 # Unified telemetry to cloud
    sed -i 's/#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
    ```
 
-6. **Secure Boot (Pi 4 only):**
+6. **Secure Boot (Compute Pi 5 only):**
    - Generate signing key: `openssl req -newkey rsa:2048 -nodes -keyout boot.key -x509 -days 365 -out boot.crt`
    - Sign kernel: `sbsign --key boot.key --cert boot.crt --output vmlinuz-signed vmlinuz`
    - Update bootloader config to verify signature (firmware-dependent)
@@ -1927,15 +1927,15 @@ cloud/telemetry/log                 # Unified telemetry to cloud
 
 **Checklist:**
 
-- [ ] All 3 nodes boot in <5 seconds (measure 5 consecutive boots, avg)
+- [ ] All edge nodes boot in <5 seconds (measure 5 consecutive boots, avg)
 - [ ] Camera H.264 stream stable for 1 hour without frame drops
 - [ ] Audio round-trip latency <50ms (P95 <75ms)
-- [ ] MQTT broker handles 3 simultaneous publishers, zero message loss
-- [ ] WiFi AP maintains 3 concurrent connections for 1 hour
+- [ ] MQTT broker handles 4 simultaneous publishers, zero message loss
+- [ ] WiFi AP maintains 4 concurrent connections for 1 hour
 - [ ] OTA manifest signs/verifies correctly
 - [ ] Canary rollout metrics green for 2 hours before promotion
-- [ ] Gateway AI model inference runs at >1 FPS on Pi 4
-- [ ] Thermal management: Pi 4 fans cycle properly, Pi Zeros <60°C sustained
+- [ ] Gateway AI model inference runs at >1 FPS on Pi 5
+- [ ] Thermal management: Pi 5 fan cycles properly, Pi Zeros <60°C sustained
 - [ ] Security audit: no critical vulnerabilities (Lynis score >75)
 - [ ] All services auto-restart on failure (systemd Restart=on-failure)
 - [ ] Logs rotate and don't fill disk (logrotate configured)
@@ -1997,9 +1997,9 @@ cloud/telemetry/log                 # Unified telemetry to cloud
    Fully functional ADAS perception system with:
    - Real-time H.264 video streaming (<100ms latency)
    - Multi-priority audio mixing and transport
-   - Offline AI inference (MobileNet-SSD on Pi 4)
+    - Offline AI inference (MobileNet-SSD on Pi 5 or Sensor Pi 4 QNX)
    - Secure OTA with staged rollout (canary → beta → production)
-   - Validated hardware integration (all 3 Pi nodes + HATs)
+    - Validated hardware integration (all edge nodes + HATs)
    
    ## Changes
    - [ ] Buildroot images generated for Sensor, UI, Gateway
@@ -2019,7 +2019,7 @@ cloud/telemetry/log                 # Unified telemetry to cloud
    1. Download images from release
    2. Verify signatures: `bash firmware/gateway/ota-verify.sh release.tar.gz`
    3. Flash to SD cards: `dd if=sensor-linux-v1.0.0.img of=/dev/sdX bs=4M`
-   4. Boot all 3 nodes, verify AP appears on WiFi scan
+    4. Boot all edge nodes, verify AP appears on WiFi scan
    5. SSH into gateway, check metrics: `curl http://localhost:8080/api/metrics`
    
    ## Support
@@ -2088,7 +2088,7 @@ cloud/telemetry/log                 # Unified telemetry to cloud
    ```
 
 **Validation:**
-- Deploy Prometheus + Grafana on Pi 4 or cloud
+- Deploy Prometheus + Grafana on Pi 5 or cloud
 - Monitor fleet for 24 hours, verify alerts trigger
 
 ---
@@ -2097,10 +2097,10 @@ cloud/telemetry/log                 # Unified telemetry to cloud
 
 | Phase | Duration | Hardware Needed | Cost (approx) |
 |-------|----------|-----------------|---------------|
-| 0: Infrastructure | 1 week | 1× Pi 4 (build host) | $75 |
+| 0: Infrastructure | 1 week | 1× Pi 5 (build host) | $75 |
 | 1: Build System | 2 weeks | 2× Pi Zero + HATs | $50 |
-| 2: Hardware Validation | 2 weeks | All 3 nodes + HATs | +$75 |
-| 3: Services | 3 weeks | Pi 4 8GB for inference | +$100 |
+| 2: Hardware Validation | 2 weeks | All edge nodes + HATs | +$75 |
+| 3: Services | 3 weeks | Pi 5 8GB for inference | +$100 |
 | 4: OTA Security | 1 week | - | - |
 | 5: Canary Rollout | 1 week | Production fleet | - |
 | 6: Integration | 2 weeks | Test lab with display | +$50 |

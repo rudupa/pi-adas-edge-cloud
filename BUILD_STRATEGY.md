@@ -28,7 +28,7 @@ All nodes use **glibc** (GNU C Library).
 
 | Partition | Filesystem | Size |
 |-----------|-----------|------|
-| `/boot`   | FAT32     | 128 MB (Pi Zero) / 512 MB (Pi 4) |
+| `/boot`   | FAT32     | 128 MB (Pi Zero) / 512 MB (Pi 5) |
 | `/`       | ext4      | 512 MB (Sensor/UI) / 2 GB (Gateway) |
 
 **Rationale:** ext4 provides journaling (reduces SD corruption risk on power loss).
@@ -39,9 +39,10 @@ All nodes use **glibc** (GNU C Library).
 
 | Node    | Root FS | Packages                        |
 |---------|---------|---------------------------------|
-| Sensor  | ~200 MB | base + alsa + ffmpeg + mosquitto |
+| Sensor (Linux)  | ~200 MB | base + alsa + ffmpeg + mosquitto |
+| Sensor (QNX)  | ~300 MB | qnx runtime + mqtt client + sensor services |
 | UI      | ~250 MB | base + drm/sdl + alsa + mosquitto |
-| Gateway | ~800 MB | base + mosquitto + nginx + tflite + numpy |
+| Gateway | ~900 MB | base + mosquitto + nginx + orchestration + tflite + numpy |
 
 ---
 
@@ -57,6 +58,7 @@ All nodes use **glibc** (GNU C Library).
 
 | Node    | Hardware            | Kernel Config              | Overlay                         |
 |---------|---------------------|----------------------------|----------------------------------|
-| Sensor  | Pi Zero W + Voice Bonnet | `build/sensor/kernel.config` | `build/sensor/overlay/`         |
+| Sensor (Linux)  | Pi Zero W + Voice Bonnet | `build/sensor/kernel.config` | `build/sensor/overlay/`         |
+| Sensor (QNX) | Pi 4 + BrainCraft HAT | `build/sensor-qnx/qnx-config` | `build/sensor-qnx/overlay/`     |
 | UI      | Pi Zero W + Pirate Audio | `build/ui/kernel.config`     | `build/ui/overlay/`             |
-| Gateway | Pi 4 + BrainCraft HAT    | `build/gateway/kernel.config`| `build/gateway/overlay/`        |
+| Gateway | Pi 5 (optional BrainCraft HAT) | `build/gateway/kernel.config`| `build/gateway/overlay/`        |

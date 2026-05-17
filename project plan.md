@@ -1,7 +1,7 @@
 # Project Plan
 ## Distributed Embedded Vision + Audio ADAS System
 
-Pi Zero W × 2 + Pi 4 × 1 — edge vision, audio, AI, and cloud gateway.
+Pi Zero W × 2 + Pi 4 (QNX) × 1 + Pi 5 × 1 — edge vision, audio, AI, and cloud gateway.
 
 ---
 
@@ -21,18 +21,19 @@ Pi Zero W × 2 + Pi 4 × 1 — edge vision, audio, AI, and cloud gateway.
 
 ## 1. Project Summary
 
-Build a three-node embedded system combining real-time video/audio streaming, lightweight ADAS perception, an AI voice assistant dashboard, and a cloud-connected gateway — all running on constrained Raspberry Pi hardware over a private Wi-Fi fabric.
+Build a four-edge-node embedded system combining real-time video/audio streaming, lightweight ADAS perception, deterministic QNX sensing, an AI voice assistant dashboard, and a cloud-connected gateway — all running on Raspberry Pi hardware over a private Wi-Fi fabric.
 
 | Attribute | Value |
 |-----------|-------|
-| Total nodes | 3 |
-| Platform | Raspberry Pi Zero W × 2, Raspberry Pi 4 × 1 |
+| Total edge nodes | 4 |
+| Platform | Raspberry Pi Zero W × 2, Raspberry Pi 4 (QNX) × 1, Raspberry Pi 5 × 1 |
 | Primary codec | H.264 (VideoCore HW encoder) |
 | Audio transport | Opus over UDP |
-| Messaging | MQTT (Mosquitto on Pi 4) |
+| Messaging | MQTT (Mosquitto on Pi 5) |
 | OS (Pi Zero) | Buildroot minimal image |
-| OS (Pi 4) | Raspberry Pi OS Lite / custom Linux |
-| AI inference | Pi 4 only (Vosk for offline voice, MobileNet-SSD for vision) |
+| OS (Sensor Pi 4) | QNX Neutrino RTOS |
+| OS (Compute Pi 5) | Raspberry Pi OS Lite / custom Linux |
+| AI inference | Pi 5 gateway + Sensor Pi 4 (QNX) split |
 | Target video latency | 50–100 ms end-to-end (tuned H.264) |
 | Target audio latency | 20–40 ms (Opus UDP) |
 | Target duration | 16 weeks |
@@ -43,7 +44,7 @@ Build a three-node embedded system combining real-time video/audio streaming, li
 
 ```text
                      +-------------------------------------+
-                     |     Gateway + Master Pi 4          |
+                     |       Compute Node Pi 5            |
                      | AP + DHCP + MQTT + Cloud + AI/CTL  |
                      |            BrainCraft HAT           |
                      +------------------+------------------+
@@ -57,6 +58,11 @@ Build a three-node embedded system combining real-time video/audio streaming, li
 |  H.264 TX + Opus TX     |                           | Dashboard + Speaker AI  |
 |  Lightweight CV/ADAS    |                           |  Voice Assistant + HMI  |
 +-------------------------+                           +-------------------------+
+                              +-------------------------+
+                              |     Sensor Pi 4 QNX     |
+                              |      BrainCraft HAT     |
+                              | RT Fusion + Local AI    |
+                              +-------------------------+
 ```
 
 ### Node responsibilities
@@ -65,7 +71,8 @@ Build a three-node embedded system combining real-time video/audio streaming, li
 |------|-------|-----|-----------|----------|
 | Sensor | Pi Zero W v1.1 | Voice Bonnet (WM8960) | 1GHz / 512MB | Camera, mics, LEDs, lightweight CV |
 | UI (Dashboard) | Pi Zero W v1.1 | Pirate Audio (ST7789 + MAX98357A) | 1GHz / 512MB | Display, speaker, voice assistant HMI, buttons |
-| Gateway+Brain | Raspberry Pi 4 | BrainCraft HAT | Quad-core A72 / up to 8GB | AP, MQTT, AI, voice, cloud, orchestration |
+| Sensor QNX Node | Raspberry Pi 4 | BrainCraft HAT | Quad-core A72 / up to 8GB | Deterministic sensing, local fusion, RT control |
+| Compute Node | Raspberry Pi 5 | Optional BrainCraft HAT | Quad-core A76 / up to 8GB | AP, MQTT, orchestration, cloud, AI coordination |
 
 ---
 
@@ -74,7 +81,7 @@ Build a three-node embedded system combining real-time video/audio streaming, li
 ### Phase 1 — Hardware Bring-Up (Weeks 1–2)
 
 Goals:
-- All three nodes boot reliably from cold power-on
+- All edge nodes boot reliably from cold power-on
 - Basic hardware validation on each node
 
 Technical tasks:
@@ -93,27 +100,27 @@ Technical tasks:
 - Confirm speaker output on MAX98357A DAC path
 - Confirm Wi-Fi associate to test AP
 
-**Gateway + Master Pi 4**
+**Compute Node Pi 5**
 - Flash OS image
 - Bring up hostapd in AP mode on 2.4GHz channel
 - Validate dnsmasq DHCP assigns leases to both Pi Zero nodes
 - Bring up Mosquitto broker; confirm MQTT connect from Pi Zero nodes
-- Confirm BrainCraft HAT display and mic path
+- Confirm optional BrainCraft HAT display and mic path (if installed)
 
 Dependencies: Hardware assembled, microSD cards flashed, power supplies connected.
 
 Acceptance:
-- All nodes associate to Pi 4 AP and receive DHCP leases
+- All nodes associate to Pi 5 AP and receive DHCP leases
 - Camera frame captured on Sensor
 - Speaker output confirmed on UI
-- MQTT publish/subscribe works across all three nodes
+- MQTT publish/subscribe works across all edge nodes
 
 ---
 
 ### Phase 2 — Video Streaming (Weeks 3–4)
 
 Goals:
-- Real-time H.264 video from Sensor to UI and/or Pi 4
+- Real-time H.264 video from Sensor to UI and/or Pi 5
 - Tuned for 50–100 ms end-to-end latency
 
 Technical tasks:
@@ -190,8 +197,8 @@ Acceptance:
 ### Phase 4 — Control Path (Weeks 6–7)
 
 Goals:
-- UI button events propagate to Gateway+Master via MQTT
-- Gateway+Master commands LED state on Sensor
+- UI button events propagate to Compute Node via MQTT
+- Compute Node commands LED state on Sensor
 
 Technical tasks:
 
@@ -200,7 +207,7 @@ Technical tasks:
 - Publish events to MQTT topic `ui/buttons`
 - Handle push-to-talk event for voice assistant activation
 
-**Gateway+Master**
+**Compute Node**
 - Subscribe to `ui/buttons` topic
 - Implement decision stub: button → action mapping
 - Publish commands to `sensor/led/set`
@@ -214,13 +221,13 @@ MQTT topic namespace:
 
 | Topic | Direction | Description |
 |-------|-----------|-------------|
-| `ui/buttons` | UI → Pi 4 | Button press events |
-| `sensor/led/set` | Pi 4 → Sensor | LED color command |
-| `sensor/led/state` | Sensor → Pi 4 | LED state confirmation |
-| `audio/event/request` | Pi 4 → UI | Trigger audio alert/prompt |
-| `audio/event/active` | UI → Pi 4 | Currently playing event |
-| `audio/tts/request` | Pi 4 → UI | Text-to-speech content |
-| `system/status` | All → Pi 4 | Heartbeat and health |
+| `ui/buttons` | UI → Pi 5 | Button press events |
+| `sensor/led/set` | Pi 5 → Sensor | LED color command |
+| `sensor/led/state` | Sensor → Pi 5 | LED state confirmation |
+| `audio/event/request` | Pi 5 → UI | Trigger audio alert/prompt |
+| `audio/event/active` | UI → Pi 5 | Currently playing event |
+| `audio/tts/request` | Pi 5 → UI | Text-to-speech content |
+| `system/status` | All → Pi 5 | Heartbeat and health |
 
 Dependencies: Phase 1 (MQTT broker up).
 
@@ -234,7 +241,7 @@ Acceptance:
 
 Goals:
 - Lightweight CV pipeline running on Sensor alongside the H.264 stream
-- Detection outputs published to Pi 4 for decision logic
+- Detection outputs published to Pi 5 for decision logic
 
 Technical tasks:
 
@@ -260,7 +267,7 @@ Technical tasks:
   - `perception/motion/event`
   - `perception/objects`
 
-**Pi 4 decision handler**
+**Pi 5 decision handler**
 - Subscribe to perception topics
 - Generate audio alert events for relevant detections
 - Log detections for post-analysis
@@ -278,7 +285,7 @@ Dependencies: Phase 2 (camera/stream pipeline stable).
 
 Acceptance:
 - Lane and motion detection running concurrently with H.264 stream at ≥15 fps
-- Object detection publishing events to Pi 4 without stalling stream loop
+- Object detection publishing events to Pi 5 without stalling stream loop
 - CPU load on Sensor node remains ≤ 80% sustained
 
 ---
@@ -287,21 +294,21 @@ Acceptance:
 
 Goals:
 - UI node acts as in-car dashboard HMI with AI voice assistant
-- Voice commands captured, processed on Pi 4, responses spoken on UI speaker
+- Voice commands captured, processed on Pi 5, responses spoken on UI speaker
 
 Technical tasks:
 
 **Sensor (mic source)**
-- Stream clean mic audio to Pi 4 for voice processing (dedicated Opus stream or tap)
+- Stream clean mic audio to Pi 5 for voice processing (dedicated Opus stream or tap)
 
-**Pi 4 (inference)**
+**Pi 5 (inference)**
 - Run Vosk offline speech recognition on incoming audio
 - Implement intent parser (command mapping)
 - Generate response content or action commands
 - Publish to `audio/tts/request` and `audio/event/request`
 
 **UI (dashboard output)**
-- Receive TTS text or pre-generated audio response from Pi 4
+- Receive TTS text or pre-generated audio response from Pi 5
 - Run lightweight TTS renderer (espeak-ng or pre-recorded clips)
 - Mix voice response into priority audio path (P2)
 - Display visual status update on ST7789 LCD during interaction
@@ -328,7 +335,7 @@ Goals:
 
 Technical tasks:
 
-**Pi 4 network services**
+**Pi 5 network services**
 - Harden hostapd config (channel, TX power, WPA2)
 - Fix DHCP leases by MAC for all nodes
 - Add Mosquitto authentication (username/password)
@@ -358,12 +365,12 @@ Acceptance:
 ### Phase 8 — Cloud Bridge and Telemetry (Weeks 13–14)
 
 Goals:
-- Pi 4 pushes telemetry, events, and snapshots to cloud backend
+- Pi 5 pushes telemetry, events, and snapshots to cloud backend
 - Dashboard or alert mechanism for remote visibility
 
 Technical tasks:
 
-**Pi 4 cloud bridge**
+**Pi 5 cloud bridge**
 - Implement REST or MQTT-over-TLS cloud uplink
 - Publish: system status heartbeats, perception event logs, audio event logs
 - Upload: periodic video snapshots (not full live stream by default)
@@ -428,13 +435,13 @@ Acceptance criteria summary:
 ### Hardware constraints
 - Pi Zero W is single-core 1GHz with 512MB RAM — no headroom for heavy DNNs
 - Pi Zero W 2.4GHz radio: safe sustained payload 6–12 Mbps
-- Pi Zero W cannot run modern DNN detectors at production FPS — offload to Pi 4
+- Pi Zero W cannot run modern DNN detectors at production FPS — offload to Pi 5/Sensor QNX
 - Pirate Audio amplifier peak draw: up to ~600 mA per channel; size PSU accordingly
-- Pi 4 requires 5V/3A USB-C supply; do not underprovision under AI load
+- Pi 5 requires 5V/5A USB-C supply; do not underprovision under orchestration/AI load
 
 ### Software constraints
 - All timing-critical media paths in C++ (video_streamer, audio_streamer)
-- Orchestration, state machines, and decision logic in Python on Pi 4
+- Orchestration, state machines, and decision logic in Python on Pi 5
 - No X11/Wayland on Pi Zero nodes — framebuffer/SDL only
 - Use Buildroot for Pi Zero OS images (2–5 s boot target)
 - Vosk must run offline — no cloud dependency for inference
@@ -470,7 +477,7 @@ gantt
     section Phase 1 — Bring-Up
     Pi Zero Buildroot boot + camera        :p1a, 2026-05-04, 7d
     UI node display + buttons + speaker    :p1b, 2026-05-04, 7d
-    Pi 4 AP + DHCP + MQTT broker           :p1c, 2026-05-04, 7d
+    Pi 5 AP + DHCP + MQTT broker           :p1c, 2026-05-04, 7d
     HW acceptance checklist                :p1d, after p1a, 3d
 
     section Phase 2 — Video Streaming
@@ -495,7 +502,7 @@ gantt
     Perception MQTT event publishing       :p5d, after p5c, 3d
 
     section Phase 6 — Voice Assistant / Dashboard
-    Vosk speech recognition on Pi 4        :p6a, 2026-07-06, 7d
+    Vosk speech recognition on Pi 5        :p6a, 2026-07-06, 7d
     TTS + response playback on UI          :p6b, 2026-07-06, 7d
     Wake / push-to-talk interaction loop   :p6c, after p6a, 5d
     Visual status on ST7789 LCD            :p6d, after p6b, 4d
@@ -506,7 +513,7 @@ gantt
     Log rotation + bounded storage         :p7c, after p7a, 3d
 
     section Phase 8 — Cloud Bridge
-    REST/MQTT cloud uplink on Pi 4         :p8a, 2026-07-27, 7d
+    REST/MQTT cloud uplink on Pi 5         :p8a, 2026-07-27, 7d
     Telemetry events + snapshot upload     :p8b, 2026-07-27, 7d
     Cloud dashboard + alert channel        :p8c, after p8a, 7d
 
@@ -542,7 +549,7 @@ gantt
 | Pi Zero CPU overrun under combined CV + encode load | High | High | Run inference at reduced cadence (every N frames); drop to 320×240 for CV path |
 | Wi-Fi 2.4GHz congestion or interference | Medium | High | Fix AP channel, reduce bitrate, implement frame-skip under load |
 | Buildroot build complexity and driver issues | Medium | Medium | Start from known working BSP; validate each HAT driver independently |
-| MobileNet-SSD too slow on Pi Zero | High | Medium | Offload to Pi 4 if latency exceeds budget; Pi Zero publishes raw frames via side channel |
+| MobileNet-SSD too slow on Pi Zero | High | Medium | Offload to Pi 5 or Sensor QNX if latency exceeds budget; Pi Zero publishes raw frames via side channel |
 | Opus codec integration issues on Buildroot | Low | Medium | Pre-validate Opus encode/decode on hardware before Buildroot integration |
 | MQTT broker instability under load | Low | High | Use Mosquitto with bounded persistence; monitor queue depth; add reconnect logic |
 | Cloud uplink instability affecting local system | Low | High | Local system must be fully autonomous; cloud uplink failure must not degrade local behavior |
@@ -555,19 +562,19 @@ gantt
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Pi 4 RAM variant | Open | Choose based on AI workload; 4GB recommended minimum for Vosk + detection |
-| Buildroot vs Pi OS on Pi 4 | Decided | Pi OS Lite on Pi 4; Buildroot on Pi Zero nodes |
+| Compute Pi 5 RAM variant | Open | Choose based on orchestration + AI workload; 8GB recommended |
+| Buildroot vs Pi OS on Compute Pi 5 | Decided | Pi OS Lite on Pi 5; Buildroot on Pi Zero nodes; QNX on Sensor Pi 4 |
 | Wake word engine | Open | Porcupine (offline) or push-to-talk only |
 | Cloud backend target | Open | AWS IoT / MQTT, Azure IoT Hub, or self-hosted; TLS MQTT bridge either way |
 | Microphone for voice (UI vs Sensor) | Open | Sensor has Voice Bonnet stereo mics; UI has no onboard mic — voice capture stays on Sensor |
-| MobileNet-SSD inference node | Decided | Pi 4 Brain for heavy inference; Pi Zero runs lane/motion only by default |
+| MobileNet-SSD inference node | Decided | Pi 5/Sensor QNX for heavy inference; Pi Zero runs lane/motion only by default |
 | Video snapshot format for cloud | Open | JPEG at reduced resolution; frequency TBD per cloud cost budget |
 
 ---
 
 ## 10. Cloud Node Addendum (Logging, OTA, Telemetry)
 
-This addendum introduces an explicit Cloud Node control plane integrated through the Gateway + Master Pi 4.
+This addendum introduces an explicit Cloud Node control plane integrated through the Compute Node (Pi 5).
 
 ### Scope
 - Telemetry ingestion and KPI storage

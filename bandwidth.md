@@ -5,7 +5,7 @@
 - [0. Codec Choice: MJPEG vs H.264 (Read This First)](#0-codec-choice-mjpeg-vs-h264-read-this-first)
 - [1. Sensor Node](#1-sensor-node-pi-zero-w-v11)
 - [2. UI Node](#2-ui-node-pi-zero-w-v11)
-- [3. Gateway + Master Node](#3-gateway--master-node-pi-4)
+- [3. Compute Node](#3-compute-node-pi-5)
 - [4. Codec + Resolution Bitrate Quick-Reference Table](#4-codec--resolution-bitrate-quick-reference-table)
 - [5. Practical Rules of Thumb](#5-practical-rules-of-thumb)
 - [6. H.264 Frame Drop Behaviour and Recovery](#6-h264-frame-drop-behaviour-and-recovery)
@@ -56,7 +56,7 @@ Mental model:
 | Decoder cost     | Trivial          | Moderate (hw-assisted)   |
 
 ### H.264 tradeoffs
-- Decoder on receiver is more complex than MJPEG (handled fine by Pi Zero/Pi 4 via hardware decode)
+- Decoder on receiver is more complex than MJPEG (handled fine by Pi Zero/Pi 5 via hardware decode)
 - GOP structure means slight buffering latency; keep GOP size small (e.g. 15–30 frames) to minimise this
 - More complex pipeline to set up initially
 
@@ -114,7 +114,7 @@ If optional upstream voice command capture is enabled:
 - Add uplink Opus voice: ~0.024 to 0.064 Mbps
 - New total remains within easy range in most deployments
 
-## 3. Gateway + Master Node (Pi 4)
+## 3. Compute Node (Pi 5)
 
 - WLAN backhaul to nodes:
   - 2.4/5GHz Wi-Fi (802.11ac capable)
@@ -126,14 +126,15 @@ If optional upstream voice command capture is enabled:
   - Cloud uplink for telemetry/snapshots: 1 to 10 Mbps is usually sufficient
 
 Whole-system data load at 30fps (H.264 primary codec):
-- Sensor -> UI video+audio H.264/Opus: ~1.1 to 3.2 Mbps
-- UI -> Gateway+Master control/events: <0.05 Mbps
-- Sensor -> Gateway+Master status/commands: <0.05 Mbps
-- Optional Sensor -> Gateway+Master duplicate audio tap: ~0.032 to 0.128 Mbps
+- Sensor Linux -> UI video+audio H.264/Opus: ~1.1 to 3.2 Mbps
+- Sensor QNX -> Gateway telemetry/audio/control: ~0.1 to 1.0 Mbps
+- UI -> Compute Node control/events: <0.05 Mbps
+- Sensor -> Compute Node status/commands: <0.05 Mbps
+- Optional Sensor -> Compute Node duplicate audio tap: ~0.032 to 0.128 Mbps
 - Cloud telemetry (status/logs/snapshots): ~0.2 to 2 Mbps typical
-- Aggregate on Gateway+Master: ~1.4 to 5.5 Mbps (well within Pi 4 headroom)
+- Aggregate on Compute Node: ~1.5 to 6.5 Mbps (well within Pi 5 headroom)
 
-With MJPEG instead: aggregate rises to ~8.3 to 16.5 Mbps — still within Pi 4 headroom
+With MJPEG instead: aggregate rises to ~8.4 to 17.5 Mbps — still within Pi 5 headroom
 but puts both Pi Zero W nodes under significant pressure.
 
 ## 4. Codec + Resolution Bitrate Quick-Reference Table

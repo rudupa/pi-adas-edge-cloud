@@ -1,7 +1,7 @@
 # Distributed Embedded Vision + Audio System
 ## Master Index
 
-Pi Zero W × 2 + Pi 4 × 1 — edge vision, audio, AI, and cloud gateway.
+Pi Zero W × 2 + Pi 4 (QNX) × 1 + Pi 5 × 1 — edge vision, audio, AI, and cloud gateway.
 
 ---
 
@@ -9,7 +9,7 @@ Pi Zero W × 2 + Pi 4 × 1 — edge vision, audio, AI, and cloud gateway.
 
 ```text
                      +-------------------------------------+
-                     |     Gateway + Master Pi 4          |
+                     |       Compute Node Pi 5            |
                      | AP + DHCP + MQTT + Cloud + AI/CTL  |
                      |            BrainCraft HAT           |
                      +------------------+------------------+
@@ -22,20 +22,26 @@ Pi Zero W × 2 + Pi 4 × 1 — edge vision, audio, AI, and cloud gateway.
 |    Camera + VoiceHat    |                           |     Pirate Audio HAT    |
 |   H.264 TX + Opus TX    |                           |  Display/Buttons/Speaker|
 +-------------------------+                           +-------------------------+
+                              +-------------------------+
+                              |     Sensor Pi 4 QNX     |
+                              |      BrainCraft HAT     |
+                              | RT Sensor Fusion / AI   |
+                              +-------------------------+
 ```
 
 | Node | Board | HAT | Key Role |
 |------|-------|-----|----------|
 | Sensor | Pi Zero W v1.1 | Adafruit Voice Bonnet | Camera + stereo mic + RGB LEDs |
 | UI | Pi Zero W v1.1 | Pimoroni Pirate Audio | Display + buttons + speaker |
-| Gateway + Master | Raspberry Pi 4 | Adafruit BrainCraft HAT | AP + MQTT + AI + cloud |
+| Sensor QNX Node | Raspberry Pi 4 | Adafruit BrainCraft HAT | QNX real-time sensing + local fusion |
+| Compute Node | Raspberry Pi 5 | Optional BrainCraft HAT | AP + MQTT + orchestration + cloud |
 
 ---
 
 ## Documents
 
 ### [HW specs.md](HW%20specs.md)
-Hardware specifications for all three nodes.
+Hardware specifications for all edge nodes.
 - Node inventory with board-level specs (CPU, RAM, wireless)
 - Per-HAT hardware details (Voice Bonnet, Pirate Audio, BrainCraft)
 - Connectivity and bus mappings
@@ -80,7 +86,7 @@ Bandwidth planning, codec selection, and stream sizing.
 ### [real adas perception stack.md](real%20adas%20perception%20stack.md)
 Mini ADAS perception pipeline and low-latency streaming strategy.
 - Feasible Pi Zero perception stages and constraints
-- ECU-style split across Sensor, UI, and Pi 4 Brain nodes
+- ECU-style split across Sensor, UI, Sensor RT (QNX), and Pi 5 compute nodes
 - 50-100 ms H.264 latency budget and tuning checklist
 - Deployment mapping and acceptance criteria
 
@@ -117,13 +123,13 @@ Unified monorepo strategy for building all 4 nodes from one repository.
 Developer build/update/release guide with flashing workflow and readiness gaps.
 - Local and CI commands for edge and cloud artifacts
 - Release and OTA manifest flow
-- SD card flashing process for Pi Zero and Pi 4
+- SD card flashing process for Pi Zero, Pi 4 (QNX), and Pi 5
 - Pending work checklist for truly functional production images
 
 ### [implementation_plan.md](implementation_plan.md)
 Detailed 14-week roadmap to close all production-readiness gaps.
 - Phase 0–9 breakdown: Buildroot setup, per-node configs, services, validation, OTA security, canary rollout, integration testing, hardening, release
-- Buildroot defconfigs and kernel configurations for all 3 nodes
+- Buildroot and QNX configurations for all edge nodes
 - Root filesystem overlays, device tree bindings, boot partition assembly
 - Hardware smoke tests (camera, audio, display, LEDs, thermal)
 - Video streaming (H.264) and audio mixing services (priority-based)
@@ -168,9 +174,9 @@ Autonomous agent execution plan for implementing the 14-week roadmap in 8–10 w
 |-------|------|
 | 1 | Buildroot boot, LED blink, camera frame capture |
 | 2 | Video + audio streaming Sensor → UI |
-| 3 | Button events → Gateway+Master, LED remote control |
-| 4 | Wi-Fi AP + DHCP + MQTT broker on Pi 4 |
-| 5 | Voice commands + decision logic on Gateway+Master |
+| 3 | Button events → Compute Node, LED remote control |
+| 4 | Wi-Fi AP + DHCP + MQTT broker on Pi 5 |
+| 5 | Voice commands + decision logic on Compute Node |
 | 6 | Cloud node integration (logging, OTA, telemetry) |
 
 ---
@@ -193,4 +199,4 @@ Autonomous agent execution plan for implementing the 14-week roadmap in 8–10 w
 |------|------|------|--------|
 | Sensor Pi Zero W | ~200 mA | ~600 mA | 5V / 2A |
 | UI Pi Zero W | ~200 mA | ~900 mA | 5V / 2A |
-| Gateway+Master Pi 4 | ~600 mA | ~3 A | 5V / 3A |
+| Compute Node Pi 5 | ~700 mA | ~5 A | 5V / 5A |
